@@ -1,0 +1,240 @@
+/* --- Variabel Global & Reset --- */
+:root {
+  --primary-bg: #0a0a1a;
+  --secondary-bg: #1a1a2a;
+  --glass-bg: rgba(26, 26, 42, 0.6); /* Latar belakang kaca */
+  --accent-color: #00ffff; /* Cyan neon */
+  --text-light: #e0e0e0;
+  --text-dark: #a0a0b0;
+  --border-color: rgba(0, 255, 255, 0.2);
+  --shadow-color: rgba(0, 255, 255, 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: var(--primary-bg);
+  color: var(--text-light);
+  line-height: 1.6;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* --- Latar Belakang Binary --- */
+.binary-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+.binary-column {
+  position: absolute;
+  top: -100%;
+  font-family: "Courier New", monospace;
+  color: var(--accent-color);
+  writing-mode: vertical-rl;
+  text-shadow: 0 0 5px var(--shadow-color);
+  user-select: none;
+  animation: fall linear infinite;
+}
+@keyframes fall {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(200vh);
+  }
+}
+
+/* --- Header --- */
+header {
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+.logo-container {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+.logo-container img {
+  height: 40px;
+  margin-right: 10px;
+}
+
+/* --- Main Content Cards --- */
+.card-section {
+  padding: 60px 40px;
+  text-align: center;
+}
+
+.card-section h2 {
+  /* --- Perubahan Baru --- */
+  font-family: "Oswald", sans-serif; /* Font baru yang "tegas" */
+  font-weight: 700; /* Bold */
+  text-transform: uppercase; /* Profesional & Disiplin */
+  letter-spacing: 1.5px; /* Jarak antar huruf agar rapi */
+  color: #ffffff; /* Warna putih bersih (Excellent) */
+  text-shadow: 0 0 12px var(--shadow-color), 0 0 25px rgba(0, 255, 255, 0.4); /* Glow (Semangat) */
+
+  /* --- Properti Lama (Dibiarkan) --- */
+  font-size: 2.5em;
+  min-height: 1.2em;
+  margin-bottom: 50px;
+  display: inline-block;
+  border-right: 3px solid var(--accent-color);
+  white-space: nowrap;
+  overflow: hidden;
+  animation: blink-caret 0.75s step-end infinite;
+}
+@keyframes blink-caret {
+  from,
+  to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: var(--accent-color);
+  }
+}
+
+/* Container Kartu (Tampilan Desktop - Grid) */
+.card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 15px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  height: 100%;
+}
+
+.card {
+  background: var(--glass-bg);
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  text-align: left;
+  height: 100%;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  will-change: transform, box-shadow;
+}
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 35px var(--shadow-color);
+  border-color: var(--accent-color);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+}
+
+.card .icon {
+  font-size: 2em;
+  color: var(--accent-color);
+  text-shadow: 0 0 10px var(--shadow-color);
+  margin-bottom: 0;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.card h3 {
+  font-size: 1.15em;
+  color: var(--text-light);
+  margin-bottom: 0;
+}
+
+/* =========================================== */
+/* --- (PERUBAHAN DI SINI) --- */
+/* =========================================== */
+.card p {
+  color: var(--text-dark);
+  font-size: 0.9em;
+  margin-top: 12px;
+
+  /* --- Tambahan Baru --- */
+  background-color: var(--primary-bg); /* Latar belakang lebih gelap */
+  padding: 10px;
+  border-radius: 8px; /* Radius lebih kecil dari kartu */
+  border: 1px solid rgba(0, 255, 255, 0.1); /* Border yg lebih redup */
+}
+/* =========================================== */
+/* --- AKHIR PERUBAHAN --- */
+/* =========================================== */
+
+/* --- Media Query Smartphone --- */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    padding: 15px 20px;
+    text-align: center;
+  }
+  .logo-container {
+    margin-bottom: 0;
+  }
+  nav {
+    display: none;
+  }
+
+  .card-section {
+    padding: 40px 20px;
+  }
+
+  .card-section h2 {
+    /* --- Perubahan Baru (disamakan dgn desktop) --- */
+    font-family: "Oswald", sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px; /* Sedikit lebih rapat di mobile */
+    color: #ffffff;
+    text-shadow: 0 0 12px var(--shadow-color); /* Glow lebih simpel */
+
+    /* --- Properti Lama (Dibiarkan) --- */
+    font-size: 1.8em;
+    margin-bottom: 30px;
+    white-space: normal;
+    animation: none;
+    border-right: none;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .card-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .card h3 {
+    font-size: 1.1em;
+  }
+
+  .card p {
+    font-size: 0.95em; /* Sedikit lebih besar di mobile agar mudah dibaca */
+  }
+}
