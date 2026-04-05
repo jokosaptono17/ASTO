@@ -5,16 +5,401 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AstoOneApp | Portal</title>
+
     <link
-        href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Poppins:wght@300;400;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Oswald:wght@500;700&family=Space+Grotesk:wght@700&display=swap"
         rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* =========================================
+           CSS: VARIABEL & RESET
+           ========================================= */
+        :root {
+            --card-bg: rgba(20, 24, 30, 0.85);
+            /* Sedikit lebih gelap agar warna pop-up */
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #FFFFFF;
+            --text-dim: #9CA3AF;
+            --bg-overlay: rgba(8, 10, 15, 0.9);
+            /* Overlay background agar teks fokus */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* =========================================
+           BACKGROUND ROBLOX STYLE (GRID FOTO)
+           ========================================= */
+        #bg-grid-container {
+            position: fixed;
+            top: -5%;
+            left: -5%;
+            width: 110vw;
+            height: 110vh;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+            grid-auto-rows: 85px;
+            gap: 10px;
+            z-index: -2;
+            padding: 10px;
+            transform: rotate(-3deg) scale(1.05);
+            /* Rotasi estetik */
+        }
+
+        .bg-grid-item {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+            opacity: 0.5;
+            filter: grayscale(50%);
+            transition: 0.5s;
+        }
+
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-overlay);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: -1;
+        }
+
+        /* =========================================
+           HEADER & TEKS UTAMA
+           ========================================= */
+        header {
+            width: 100%;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: center;
+            background: rgba(8, 10, 15, 0.7);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--card-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo-container img {
+            max-height: 40px;
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+            transition: 0.3s;
+        }
+
+        .logo-container:hover img {
+            transform: scale(1.05);
+        }
+
+        main {
+            width: 100%;
+            max-width: 1000px;
+            padding: 40px 15px 80px 15px;
+            flex: 1;
+        }
+
+        h2#typing-text {
+            font-family: 'Space Grotesk', sans-serif;
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            color: #FFFFFF;
+            text-transform: uppercase;
+            text-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 4px;
+            background-color: #fff;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* =========================================
+           CARD SUPER PREMIUM (HORIZONTAL + NUMBER + ANIMATION)
+           ========================================= */
+        .card-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .card-container {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+        }
+
+        .card-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            outline: none;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 1. Efek Garis Warna Kiri */
+        .card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 5px;
+            background: var(--theme);
+            transition: width 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* 2. Animasi Sapuan Kaca (Glass Sweep) */
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.08), transparent);
+            transform: skewX(-25deg);
+            transition: left 0.6s ease;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* EFEK HOVER KESELURUHAN CARD */
+        .card-link:hover .card {
+            transform: translateX(6px) translateY(-3px);
+            background: rgba(28, 33, 43, 0.95);
+            border-color: var(--theme);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(var(--theme-rgb), 0.2);
+        }
+
+        .card-link:hover .card::before {
+            width: 8px;
+            box-shadow: 0 0 15px var(--theme);
+        }
+
+        .card-link:hover .card::after {
+            left: 150%;
+        }
+
+        /* Trigger sapuan kaca */
+
+        /* 3. Watermark Nomor di Latar Belakang Card */
+        .card-number {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 4.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            opacity: 0.03;
+            transition: all 0.4s ease;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .card-link:hover .card-number {
+            opacity: 0.15;
+            color: var(--theme);
+            transform: translateY(-50%) scale(1.1) translateX(-5px);
+        }
+
+        /* Elemen Logo Aplikasi */
+        .app-logo {
+            width: 55px;
+            height: 55px;
+            border-radius: 14px;
+            object-fit: contain;
+            background-color: #ffffff;
+            border: 2px solid var(--card-border);
+            padding: 4px;
+            flex-shrink: 0;
+            z-index: 2;
+            transition: 0.3s;
+        }
+
+        .card-link:hover .app-logo {
+            border-color: var(--theme);
+            transform: rotate(-5deg) scale(1.08);
+        }
+
+        /* Area Teks */
+        .card-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .card-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .card-title-row h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: 0.5px;
+        }
+
+        .badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(var(--theme-rgb), 0.15);
+            color: var(--theme);
+            border: 1px solid rgba(var(--theme-rgb), 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-content p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: color 0.3s;
+        }
+
+        .card-link:hover .card-content p {
+            color: #D1D5DB;
+        }
+
+        /* 4. Area Status Kanan (Lampu LED + Panah) */
+        .card-status {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            z-index: 2;
+            padding-left: 10px;
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Lampu Notifikasi (Pulse Dot) */
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #4B5563;
+            /* Mati saat tidak di-hover */
+            transition: 0.3s;
+            position: relative;
+        }
+
+        /* Efek nyala lampu saat di hover */
+        .card-link:hover .pulse-dot {
+            background-color: var(--theme);
+            box-shadow: 0 0 10px var(--theme);
+        }
+
+        .card-link:hover .pulse-dot::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            border: 2px solid var(--theme);
+            animation: pulse-ring 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        .go-icon {
+            font-size: 1.4rem;
+            color: #4B5563;
+            transition: 0.3s;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-link:hover .go-icon {
+            color: #000;
+            background: var(--theme);
+            transform: translateX(5px);
+        }
+    </style>
 </head>
 
 <body>
 
-    <div class="binary-background"></div>
+    <div id="bg-grid-container"></div>
+    <div class="bg-overlay"></div>
 
     <header>
         <a href="#" class="logo-container">
@@ -23,176 +408,251 @@
     </header>
 
     <main>
-        <section class="card-section">
-            <h2 id="typing-text">Plant Asto ,Kita Satu Kita Bisa Kita Hebat</h2>
+        <h2 id="typing-text"></h2>
 
-            <div class="card-container">
+        <div class="card-container">
 
-                <a href="http://mekanikpintar.com/" class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-lightbulb-line icon"></i>
-                            <h3>MEKANIKPINTAR.COM</h3>
+            <a href="http://mekanikpintar.com/" class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #FACC15; --theme-rgb: 250, 204, 21;">
+                    <div class="card-number">01</div> <img src="education.png"
+                        alt="Mekanik Pintar" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>MEKANIKPINTAR</h3><span class="badge">Knowledge</span>
                         </div>
-                        <p>Bank Knowledge,Innovation Idea,Mechanic Development.</p>
+                        <p>Bank Knowledge, Innovation Idea, Mechanic Development.</p>
                     </div>
-                </a>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div> <i class="ri-arrow-right-line go-icon"></i>
+                    </div>
+                </div>
+            </a>
 
-                <a href="https://she-landing-page.vercel.app/#" class="card-link" target="_blank"
-                    rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-cloud-line icon"></i>
-                            <h3>SHE PLANT ASTO SYSTEM ADMINISTRATION</h3>
+            <a href="https://she-landing-page.vercel.app/#" class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #4ADE80; --theme-rgb: 74, 222, 128;">
+                    <div class="card-number">02</div>
+                    <img src="safety.png" alt="SHE System" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>SHE SYSTEM ADMIN</h3><span class="badge">Safety admin</span>
                         </div>
-                        <p>Induksi SHE K3,induksi Plant,Daftar MCU,Soal BBS Pengawas,Certificate check.</p>
+                        <p>Induksi SHE K3, Induksi Plant, Daftar MCU, Soal BBS Pengawas.</p>
                     </div>
-                </a>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
+                    </div>
+                </div>
+            </a>
 
-                <a href="https://script.google.com/macros/s/AKfycbzk5mHcHDla5I-99rdD4IS4RMWRNvqtcHXHjjqTW3vNrISNYd_aE7Ju7nZ5MJGWKoR_/exec"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-shield-check-line icon"></i>
-                            <h3>MORENHO (MOnitor REdo uNit HOling)</h3>
+            <a href="https://script.google.com/macros/s/AKfycbzk5mHcHDla5I-99rdD4IS4RMWRNvqtcHXHjjqTW3vNrISNYd_aE7Ju7nZ5MJGWKoR_/exec"
+                class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #F87171; --theme-rgb: 248, 113, 113;">
+                    <div class="card-number">03</div>
+                    <img src="https://placehold.co/100x100/ffffff/F87171?text=MRN" alt="Morenho" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>MORENHO</h3><span class="badge">Dashboard</span>
                         </div>
                         <p>Dashboard Monitoring unit after service 3 days period.</p>
                     </div>
-                </a>
-                 <a href="https://script.google.com/macros/s/AKfycbzC9QkkInZHQyfdqwMccqU0_bM1V1bSPo_OMmSMH36IhYaExR6YKYoi9M_HLe3mBQNf-A/exec"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-shield-check-line icon"></i>
-                            <h3>MONATA (MOnitoring All Tyre Area)</h3>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
+                    </div>
+                </div>
+            </a>
+
+            <a href="https://script.google.com/macros/s/AKfycbzC9QkkInZHQyfdqwMccqU0_bM1V1bSPo_OMmSMH36IhYaExR6YKYoi9M_HLe3mBQNf-A/exec"
+                class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #60A5FA; --theme-rgb: 96, 165, 250;">
+                    <div class="card-number">04</div>
+                    <img src="tyre.png" alt="Monata" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>MONATA</h3><span class="badge">Dashboard</span>
                         </div>
                         <p>Dashboard Activity and Monitoring TYRE Management.</p>
                     </div>
-                </a>
-
-                <a href="https://script.google.com/macros/s/AKfycbx2IfQn0rxtbXfLGqJR-mACxSiOZWnHa8kbKM7QA-Ihml1WqSMwvvGF9PJSZiZD6uo5/exec"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-tools-line icon"></i>
-                            <h3>LIST ASSET PPD PLANT ASTO</h3>
-                        </div>
-                        <p>List asset tools dan device. Silahkan klik pinjam pada daftar tabel jika ingin meminjam.</p>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
                     </div>
-                </a>
+                </div>
+            </a>
 
-             
-                <a href="https://drive.google.com/drive/folders/1UGQuEbgfUJpQ7h3fab0f5yOL1q2SZz3o?hl=ID"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-folder-open-line icon"></i>
-                            <h3>MECA AID - FOR MECHANIC</h3>
+            <a href="https://script.google.com/macros/s/AKfycbx2IfQn0rxtbXfLGqJR-mACxSiOZWnHa8kbKM7QA-Ihml1WqSMwvvGF9PJSZiZD6uo5/exec"
+                class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #C084FC; --theme-rgb: 192, 132, 252;">
+                    <div class="card-number">05</div>
+                    <img src="https://placehold.co/100x100/ffffff/C084FC?text=AST" alt="Asset PPD" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>LIST ASSET PPD</h3><span class="badge">Inventory</span>
                         </div>
-                        <p>Google Drive sharing MeCa AID.</p>
+                        <p>List asset tools dan device. Klik untuk pinjam alat.</p>
                     </div>
-                </a>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
+                    </div>
+                </div>
+            </a>
 
-                <a href="https://drive.google.com/drive/folders/137ifhVlOjI2xyqqPg4Qw-uMSEsVs8iLR?hl=ID"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-book-read-line icon"></i>
-                            <h3>SHOP-MANUAL ONE FOR ALL</h3>
+            <a href="https://drive.google.com/drive/folders/1UGQuEbgfUJpQ7h3fab0f5yOL1q2SZz3o?hl=ID" class="card-link"
+                target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #2DD4BF; --theme-rgb: 45, 212, 191;">
+                    <div class="card-number">06</div>
+                    <img src="https://placehold.co/100x100/ffffff/2DD4BF?text=AID" alt="Meca Aid" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>MECA AID</h3><span class="badge">G-Drive</span>
                         </div>
-                        <p>KOMATSU SHOP MANUAL ONE FOR ALL+ ULTRA.</p>
+                        <p>Google Drive sharing MeCa AID khusus Mekanik.</p>
                     </div>
-                </a>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
+                    </div>
+                </div>
+            </a>
 
-                <a href="https://ppdasto.github.io/soal_ujian/"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-file-list-line icon"></i>
-                            <h3>TEST SOAL UJIAN PLANT</h3>
+            <a href="https://drive.google.com/drive/folders/137ifhVlOjI2xyqqPg4Qw-uMSEsVs8iLR?hl=ID" class="card-link"
+                target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #F472B6; --theme-rgb: 244, 114, 182;">
+                    <div class="card-number">07</div>
+                    <img src="shopmanual.png" alt="Shop Manual" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>SHOP-MANUAL</h3><span class="badge">Document</span>
+                        </div>
+                        <p>KOMATSU SHOP MANUAL ONE FOR ALL + ULTRA.</p>
+                    </div>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
+                    </div>
+                </div>
+            </a>
+
+            <a href="https://ppdasto.github.io/soal_ujian/" class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #818CF8; --theme-rgb: 129, 140, 248;">
+                    <div class="card-number">08</div>
+                    <img src="https://placehold.co/100x100/ffffff/818CF8?text=EXM" alt="Ujian" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>TEST SOAL UJIAN</h3><span class="badge">Assessment</span>
                         </div>
                         <p>GATEWAY SYSTEM UJIAN MEKANIK PLANT ASTO.</p>
                     </div>
-                </a>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
+                    </div>
+                </div>
+            </a>
 
-                <a href="https://script.google.com/macros/s/AKfycbzXPy8vWkEXDe9-lMjLyg_gJXxQJm-QrOquVu8V-UrcamPF_ZGrCzcVkXhoCe5B-Jit/exec"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-file-list-line icon"></i>
-                            <h3>DASHBOARD TRAINING PPD ASTO</h3>
+            <a href="https://script.google.com/macros/s/AKfycbzXPy8vWkEXDe9-lMjLyg_gJXxQJm-QrOquVu8V-UrcamPF_ZGrCzcVkXhoCe5B-Jit/exec"
+                class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #FB923C; --theme-rgb: 251, 146, 60;">
+                    <div class="card-number">09</div>
+                    <img src="https://placehold.co/100x100/ffffff/FB923C?text=TRN" alt="Training" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>DASHBOARD TRAINING</h3><span class="badge">Analytics</span>
                         </div>
                         <p>MONITORING HASIL UJIAN DAN REVIEW SOAL.</p>
                     </div>
-                </a>
-                  <a href="http://46.62.220.143:3000/login"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-file-list-line icon"></i>
-                            <h3>DASHBOARD EQUIPMENT MONITORING</h3>
-                        </div>
-                        <p>DASHBOARD EQUIPMENT MONITORING.</p>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
                     </div>
-                </a>
-                   <a href="http://46.62.220.143:1880/dashboard"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-file-list-line icon"></i>
-                            <h3>DASHBOARD REALTIME</h3>
+                </div>
+            </a>
+
+            <a href="http://46.62.220.143:3000/login" class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #38BDF8; --theme-rgb: 56, 189, 248;">
+                    <div class="card-number">10</div>
+                    <img src="https://placehold.co/100x100/ffffff/38BDF8?text=EQP" alt="Equipment" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>EQUIPMENT MONITORING</h3><span class="badge">IoT</span>
+                        </div>
+                        <p>DASHBOARD EQUIPMENT MONITORING SYSTEM.</p>
+                    </div>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
+                    </div>
+                </div>
+            </a>
+
+            <a href="http://46.62.220.143:1880/dashboard" class="card-link" target="_blank" rel="noopener noreferrer">
+                <div class="card" style="--theme: #A3E635; --theme-rgb: 163, 230, 53;">
+                    <div class="card-number">11</div>
+                    <img src="https://placehold.co/100x100/ffffff/A3E635?text=LIV" alt="Realtime" class="app-logo">
+                    <div class="card-content">
+                        <div class="card-title-row">
+                            <h3>DASHBOARD REALTIME</h3><span class="badge">Live</span>
                         </div>
                         <p>DASHBOARD REALTIME EQUIPMENT MONITORING.</p>
                     </div>
-                </a>
-
-                 <!-- <a href="https://ppdasto.github.io/MekanikAsuh/"
-                    class="card-link" target="_blank" rel="noopener noreferrer">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="ri-file-list-line icon"></i>
-                            <h3>GL WALI MEKANIK PLANT ASTO</h3>
-                        </div>
-                        <p>DATA MONITORING GL WALI DAN HISTORICAL ROTATION MEKANIK.</p>
+                    <div class="card-status">
+                        <div class="pulse-dot"></div>
+                        <i class="ri-arrow-right-line go-icon"></i>
                     </div>
-                </a> -->
+                </div>
+            </a>
 
-
-
-            </div>
-        </section>
+        </div>
     </main>
 
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. EFEK MENGETIK
+            const textElement = document.getElementById('typing-text');
+            const textToType = "PLANT ASTO | KITA SATU, BISA, HEBAT";
+            let index = 0;
+            textElement.innerHTML = '<span id="typed"></span><span class="cursor"></span>';
+            const typedSpan = document.getElementById('typed');
+
+            function typeWriter() {
+                if (index < textToType.length) {
+                    typedSpan.innerHTML += textToType.charAt(index);
+                    index++;
+                    setTimeout(typeWriter, 50);
+                }
+            }
+            setTimeout(typeWriter, 500);
+
+            // =======================================================
+            // 2. GENERATOR BACKGROUND FOTO KARYAWAN (ROBLOX STYLE)
+            // =======================================================
+
+            // Masukkan link URL foto karyawan Anda di bawah ini
+            const employeePhotos = [
+                "https://placehold.co/200x200/2a2a2a/ffffff?text=FOTO+1",
+                "https://placehold.co/200x200/3a3a3a/ffffff?text=FOTO+2",
+                "https://placehold.co/200x200/4a4a4a/ffffff?text=FOTO+3",
+                "https://placehold.co/200x200/5a5a5a/ffffff?text=FOTO+4"
+                // Tambahkan link URL lainnya di sini...
+            ];
+
+            const gridContainer = document.getElementById('bg-grid-container');
+            const totalGridItemsToRender = 100; // Jumlah kotak untuk menutupi seluruh layar
+
+            for (let i = 0; i < totalGridItemsToRender; i++) {
+                const imgElement = document.createElement('img');
+                imgElement.className = 'bg-grid-item';
+
+                // Mengacak foto agar background terlihat lebih natural
+                const randomIndex = Math.floor(Math.random() * employeePhotos.length);
+                imgElement.src = employeePhotos[randomIndex];
+
+                gridContainer.appendChild(imgElement);
+            }
+        });
+    </script>
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
