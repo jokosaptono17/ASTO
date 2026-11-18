@@ -27,7 +27,8 @@ composer install --no-dev --optimize-autoloader
 Pastikan Anda berada di `/www/wwwroot/plantasto.my.id` dan di folder itu ada `artisan`
 (bukan subfolder `plantasto.my.id/plantasto.my.id`).
 
-Isi `.env` (nano: simpan **Ctrl+O** lalu Enter, keluar **Ctrl+X**):
+Isi `.env` (nano: simpan **Ctrl+O** lalu Enter, keluar **Ctrl+X**). Ubah baris yang **sudah ada** — jangan menambah baris
+baru dengan nama yang sama, karena baris yang paling bawah yang dipakai (misalnya `ADMIN_NRP=` kosong di akhir file):
 
 | Kunci | Isi |
 | --- | --- |
