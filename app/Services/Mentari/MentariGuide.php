@@ -2,8 +2,10 @@
 
 namespace App\Services\Mentari;
 
+use App\Models\AppLink;
 use App\Models\MentariFaq;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 /**
@@ -11,38 +13,148 @@ use Illuminate\Support\Str;
  * mencari aplikasi yang cocok, dan memakai FAQ yang diisi admin.
  * Dipakai bila layanan AI belum tersambung, lambat, atau gagal.
  *
- * Jawaban: ['reply' => string, 'actions' => [['label', 'href', 'external'?]]]
+ * Jawaban: ['reply' => string, 'actions' => [['label', 'href'|'ask', 'external'?]],
+ *          'cards' => [...], 'intent' => string]
+ * Kartu (orang, daftar, angka) dibuat oleh PeopleDesk.
  */
 class MentariGuide
 {
     public const CHIPS = [
         'guest' => ['Lupa PIN', 'NRP saya belum terdaftar', 'Cara pasang aplikasi', 'Apa itu AstoOne?'],
-        'user' => ['Info terbaru', 'Cari shop manual', 'Aplikasi untuk training', 'Lupa / ganti PIN'],
+        'user' => ['Data saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?', 'Cari shop manual'],
+        'gl' => ['Mekanik asuh saya', 'Data saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?'],
+        'admin' => ['Statistik portal', 'Siapa yang belum aktivasi?', 'Aplikasi yang gangguan', 'Kampanye paling banyak diklik', 'Data saya'],
     ];
 
     private const STOPWORDS = ['yang', 'untuk', 'dengan', 'dimana', 'mana', 'buka', 'bukakan', 'tolong', 'mau', 'ingin', 'saya', 'aku', 'aplikasi', 'app', 'apps', 'cari', 'carikan', 'link', 'tautan', 'web', 'website', 'halaman', 'gimana', 'bagaimana', 'cara', 'apa', 'ada', 'tidak', 'bisa', 'minta', 'dong', 'nya', 'itu', 'ini', 'kak', 'min', 'mentari', 'portal', 'astoone', 'sistem', 'system'];
 
-    public static function chipsFor(string $role): array
+    /** Intent yang boleh diserahkan ke AI bila MENTARI_ENDPOINT diatur. */
+    public const AI_INTENTS = ['fallback', 'greeting', 'identity', 'thanks'];
+
+    public function __construct(private PeopleDesk $people) {}
+
+    public static function chipsFor(?User $user): array
     {
-        return $role === 'guest' ? self::CHIPS['guest'] : self::CHIPS['user'];
+        return match (true) {
+            ! $user => self::CHIPS['guest'],
+            $user->isAdmin() => self::CHIPS['admin'],
+            $user->mentees()->exists() => self::CHIPS['gl'],
+            default => self::CHIPS['user'],
+        };
     }
 
-    public function answer(string $message, array $context): array
+    public function answer(string $message, array $context, ?User $viewer = null): array
     {
-        $q = Str::lower(trim($message));
-        $guest = ($context['role'] ?? 'guest') === 'guest';
+        $q = Str::lower(trim(preg_replace('/\s+/', ' ', $message)));
+        $q = rtrim($q, " ?!.");
 
-        $steps = $guest
-            ? ['account', 'install', 'faq', 'identity', 'greeting']
-            : ['account', 'install', 'announcements', 'campaigns', 'faq', 'findApp', 'identity', 'greeting', 'thanks'];
+        if (! $viewer) {
+            foreach (['account', 'install', 'faq', 'identity', 'greeting'] as $step) {
+                if ($answer = $this->{$step}($q, $context)) {
+                    return $this->finish($answer, $step);
+                }
+            }
 
-        foreach ($steps as $step) {
-            if ($answer = $this->{$step}($q, $context)) {
-                return $answer;
+            return $this->finish($this->fallback($message, true), 'fallback');
+        }
+
+        $steps = [
+            'appKnowledge' => fn () => $this->appKnowledge($q),
+            'self' => fn () => $this->people->self($q, $viewer),
+            'nrp' => fn () => $this->people->byNrp($message, $q, $viewer),
+            'account' => fn () => $this->account($q, $context),
+            'install' => fn () => $this->install($q),
+            'stats' => fn () => $this->people->stats($q, $viewer),
+            'announcements' => fn () => $this->announcements($q, $context),
+            'campaigns' => fn () => $this->campaigns($q, $context),
+            'faq' => fn () => $this->faq($q),
+            'findApp' => fn () => $this->findApp($q, $context),
+            'name' => fn () => $this->people->byName($q, $viewer),
+            'identity' => fn () => $this->identity($q),
+            'greeting' => fn () => $this->greeting($q, $context),
+            'thanks' => fn () => $this->thanks($q),
+        ];
+        foreach ($steps as $intent => $step) {
+            if ($answer = $step()) {
+                return $this->finish($answer, $answer['intent'] ?? $intent);
             }
         }
 
-        return $this->fallback($message, $guest);
+        return $this->finish($this->fallback($message, false), 'fallback');
+    }
+
+    private function finish(array $answer, string $intent): array
+    {
+        return ['reply' => $answer['reply'], 'actions' => $answer['actions'] ?? [], 'cards' => $answer['cards'] ?? [], 'intent' => $intent];
+    }
+
+    /* ------------------------------------------------ pengetahuan aplikasi */
+
+    /**
+     * "apa itu monata", "cara login monata", "siapa admin monata".
+     * Hanya menjawab bila nama aplikasinya jelas disebut.
+     */
+    private function appKnowledge(string $q): ?array
+    {
+        $kind = match (true) {
+            (bool) preg_match('/\b(siapa|kontak|hubungi|nomor)\b.*\b(admin|pic|pengelola|penanggung ?jawab|pj|pembuat)\b|\b(admin|pic|pengelola)\b/u', $q) => 'pic',
+            (bool) preg_match('/\b(cara|bagaimana|gimana|langkah|tutorial|panduan)\b/u', $q) => 'howto',
+            (bool) preg_match('/\b(apa itu|apa sih|apakah itu|fungsi|kegunaan|guna|untuk apa|buat apa|jelaskan|penjelasan|itu apa|maksud)\b/u', $q) => 'what',
+            default => null,
+        };
+        if (! $kind) {
+            return null;
+        }
+        $app = $this->matchApp($q);
+        if (! $app) {
+            return null;
+        }
+
+        $open = ['label' => 'Buka '.$app->name, 'href' => route('apps.go', $app)];
+        $pic = $app->picWhatsapp("Halo {$app->pic_name}, saya mau tanya tentang {$app->name}.");
+        $picAction = $pic ? ['label' => 'Chat '.($app->pic_name ?: 'PIC '.$app->name), 'href' => $pic, 'external' => true] : null;
+
+        return match ($kind) {
+            'what' => $this->reply(
+                ($app->description ?: ($app->tagline ? "{$app->name}: {$app->tagline}." : "{$app->name} adalah salah satu aplikasi Plant ASTO."))
+                    .($app->category ? "\nKategori: {$app->category->name}." : ''),
+                array_filter([$open, $app->howto ? ['label' => 'Cara pakai', 'ask' => 'cara pakai '.$app->name] : null]),
+            ),
+            'howto' => $this->reply(
+                $app->howto ? "Cara pakai {$app->name}:\n{$app->howto}" : "Panduan cara pakai {$app->name} belum diisi admin."
+                    .($app->pic_name ? " Tanyakan ke PIC-nya, {$app->pic_name}." : ' Tanyakan ke admin AstoOne.'),
+                array_filter([$open, $app->howto ? null : ($picAction ?? $this->wa("Halo Admin AstoOne, bagaimana cara pakai {$app->name}?"))]),
+            ),
+            'pic' => $this->reply(
+                $app->pic_name ? "PIC / admin {$app->name}: {$app->pic_name}." : "PIC {$app->name} belum dicatat. Untuk sementara hubungi admin AstoOne.",
+                array_filter([$picAction ?? $this->wa("Halo Admin AstoOne, siapa PIC {$app->name}?"), $open]),
+            ),
+        };
+    }
+
+    /** Aplikasi yang namanya disebut jelas di pertanyaan. */
+    private function matchApp(string $q): ?AppLink
+    {
+        $best = null;
+        $bestScore = 0;
+        foreach (AppLink::active()->with('category')->get() as $app) {
+            $name = Str::lower($app->name);
+            $score = 0;
+            if (str_contains($q, $name)) {
+                $score = 100 + mb_strlen($name);
+            } else {
+                foreach (preg_split('/\s+/', $name) as $word) {
+                    if (mb_strlen($word) >= 4 && preg_match('/(^|\s)'.preg_quote($word, '/').'/u', $q)) {
+                        $score += 10 + mb_strlen($word);
+                    }
+                }
+            }
+            if ($score > $bestScore) {
+                [$best, $bestScore] = [$app, $score];
+            }
+        }
+
+        return $best;
     }
 
     /* ---------------------------------------------------------------- akun */
@@ -172,6 +284,9 @@ class MentariGuide
         $text = $top->count() === 1
             ? "Ini dia: {$first['name']}".($first['tagline'] ? " — {$first['tagline']}" : '').'.'
             : 'Saya menemukan beberapa aplikasi yang cocok:';
+        if ($top->count() === 1 && ($desc = AppLink::find($first['id'])?->description)) {
+            $text = "Ini dia {$first['name']}. {$desc}";
+        }
         if (($first['status'] ?? null) === 'down') {
             $text .= "\nCatatan: {$first['name']} sedang tidak merespons saat terakhir dicek.";
         }
@@ -187,7 +302,7 @@ class MentariGuide
             return null;
         }
 
-        return $this->reply('Saya Mentari, robot mekanik asisten Plant ASTO. AstoOne adalah pintu masuk ke semua aplikasi Plant ASTO — MekanikPintar, Induksi, Workshop, Monata, shop manual, dan lainnya — cukup sekali masuk dengan NRP. Tanyakan saja mau buka apa, saya carikan.');
+        return $this->reply("Saya Mentari, robot mekanik asisten Plant ASTO. AstoOne adalah pintu masuk ke semua aplikasi Plant ASTO — cukup sekali masuk dengan NRP.\nCoba tanya: \"apa itu Monata?\", \"training saya\", atau ketik NRP rekan kerja untuk melihat datanya.");
     }
 
     private function greeting(string $q, array $c): ?array

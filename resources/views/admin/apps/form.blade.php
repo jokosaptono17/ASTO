@@ -37,6 +37,29 @@
                 </div>
             </section>
 
+            <section class="a-card grid gap-5 p-5 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <h2 class="font-display font-semibold">Pengetahuan untuk Mentari</h2>
+                    <p class="text-xs text-mist">Dipakai Mentari saat ada yang bertanya "apa itu {{ $app->name ?: 'aplikasi ini' }}?", "cara pakai …?", atau "siapa admin …?".</p>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="label" for="description">Penjelasan (apa itu)</label>
+                    <textarea id="description" name="description" rows="3" maxlength="3000" class="field" placeholder="Jelaskan fungsi aplikasi ini dengan bahasa sederhana">{{ old('description', $app->description) }}</textarea>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="label" for="howto">Cara pakai / login</label>
+                    <textarea id="howto" name="howto" rows="4" maxlength="3000" class="field" placeholder="1. Buka …&#10;2. Login dengan …&#10;3. …">{{ old('howto', $app->howto) }}</textarea>
+                </div>
+                <div>
+                    <label class="label" for="pic_name">PIC / admin aplikasi</label>
+                    <input id="pic_name" name="pic_name" value="{{ old('pic_name', $app->pic_name) }}" maxlength="100" class="field" placeholder="Nama PIC">
+                </div>
+                <div>
+                    <label class="label" for="pic_phone">WhatsApp PIC</label>
+                    <input id="pic_phone" name="pic_phone" value="{{ old('pic_phone', $app->pic_phone) }}" inputmode="tel" class="field" placeholder="08…">
+                </div>
+            </section>
+
             <section class="a-card space-y-4 p-5">
                 <div class="flex gap-2">
                     <button type="button" @click="type = 'remix'" :class="type === 'remix' ? 'bg-neon text-[#04170d]' : 'bg-white/[0.05] text-fog'" class="rounded-full px-4 py-1.5 text-sm font-semibold">Pilih ikon</button>

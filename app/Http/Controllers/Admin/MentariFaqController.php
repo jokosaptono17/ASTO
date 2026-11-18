@@ -47,7 +47,7 @@ class MentariFaqController extends Controller
     {
         $data = $request->validate(['message' => ['required', 'string', 'max:500']]);
 
-        return response()->json($guide->answer($data['message'], $contexts->for($request->user())));
+        return response()->json($guide->answer($data['message'], $contexts->for($request->user()), $request->user()));
     }
 
     private function validated(Request $request): array

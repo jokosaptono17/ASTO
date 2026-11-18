@@ -18,6 +18,10 @@ class UserImporter
         'department' => ['departemen', 'department', 'dept', 'section', 'seksi', 'bagian'],
         'position' => ['jabatan', 'position', 'posisi', 'grade'],
         'phone' => ['no hp', 'hp', 'telepon', 'no telepon', 'phone', 'whatsapp', 'no wa'],
+        'grade' => ['grade', 'grade26', 'grade 2026', 'golongan'],
+        'supervisor' => ['gl wali', 'gl wali new', 'wali', 'atasan', 'gl'],
+        'location' => ['lokasi', 'location', 'area', 'lokasi kerja'],
+        'program' => ['program', 'status program', 'idp map'],
     ];
 
     /**
@@ -64,9 +68,10 @@ class UserImporter
             }
 
             $data = ['name' => $name, 'is_active' => true];
-            foreach (['department', 'position', 'phone'] as $field) {
+            foreach (['department', 'position', 'phone', 'grade', 'supervisor', 'location', 'program'] as $field) {
                 if (isset($map[$field]) && ($value = trim($row[$map[$field]] ?? '')) !== '') {
-                    $data[$field] = $value;
+                    // Grade angka dari Excel (7) disimpan sebagai M7
+                    $data[$field] = $field === 'grade' && ctype_digit($value) ? 'M'.$value : $value;
                 }
             }
 
@@ -79,6 +84,16 @@ class UserImporter
                 $result['created']++;
             }
             $seen[] = $nrp;
+        }
+
+        // Cocokkan GL wali dengan NRP setelah semua karyawan masuk
+        if ($seen && isset($map['supervisor'])) {
+            $candidates = User::where('is_active', true)->get(['nrp', 'name']);
+            User::whereIn('nrp', $seen)->whereNotNull('supervisor')->get()
+                ->each(function (User $u) use ($candidates) {
+                    $u->resolveSupervisor($candidates);
+                    $u->saveQuietly();
+                });
         }
 
         if ($deactivateMissing && $seen) {

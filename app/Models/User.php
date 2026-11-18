@@ -20,6 +20,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'nrp', 'name', 'department', 'position', 'phone', 'role', 'is_active',
+        'grade', 'supervisor', 'supervisor_nrp', 'location', 'program',
     ];
 
     protected $hidden = ['pin', 'remember_token'];
@@ -54,6 +55,53 @@ class User extends Authenticatable
     public function setNameAttribute($value): void
     {
         $this->attributes['name'] = Str::upper(trim(preg_replace('/\s+/', ' ', (string) $value)));
+    }
+
+    public function setSupervisorAttribute($value): void
+    {
+        $value = trim(preg_replace('/\s+/', ' ', (string) $value));
+        $this->attributes['supervisor'] = $value === '' ? null : Str::upper($value);
+    }
+
+    /**
+     * Cocokkan nama GL wali dengan karyawan terdaftar (ejaan di Excel kadang
+     * berbeda, mis. SETIYAWAN vs SETIAWAN) lalu isi supervisor_nrp.
+     */
+    public function resolveSupervisor(?\Illuminate\Support\Collection $candidates = null): void
+    {
+        if (! $this->supervisor) {
+            $this->supervisor_nrp = null;
+
+            return;
+        }
+        $candidates ??= static::query()->where('is_active', true)->get(['nrp', 'name']);
+        $target = self::nameKey($this->supervisor);
+        $best = null;
+        $bestScore = 0.0;
+        foreach ($candidates as $c) {
+            if ($c->nrp === $this->nrp) {
+                continue;
+            }
+            $key = self::nameKey($c->name);
+            if ($key === $target) {
+                [$best, $bestScore] = [$c, 100.0];
+                break;
+            }
+            similar_text($key, $target, $pct);
+            // Nama di Excel kadang disingkat: "MUHAMMAD RISWAN A" vs "MUHAMMAD RISWAN ARIADI"
+            if (str_starts_with($key, $target) || str_starts_with($target, $key)) {
+                $pct = max($pct, 92.0);
+            }
+            if ($pct > $bestScore) {
+                [$best, $bestScore] = [$c, $pct];
+            }
+        }
+        $this->supervisor_nrp = $bestScore >= 88 ? $best->nrp : null;
+    }
+
+    public static function nameKey(string $name): string
+    {
+        return Str::of($name)->upper()->replaceMatches('/[^A-Z ]/', '')->squish()->toString();
     }
 
     public function isActivated(): bool
@@ -91,6 +139,16 @@ class User extends Authenticatable
     public function roleLabel(): string
     {
         return self::ROLES[$this->role] ?? $this->role;
+    }
+
+    public function supervisorUser(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'supervisor_nrp', 'nrp');
+    }
+
+    public function mentees(): HasMany
+    {
+        return $this->hasMany(User::class, 'supervisor_nrp', 'nrp');
     }
 
     public function favorites(): BelongsToMany

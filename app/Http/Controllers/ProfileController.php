@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\LmsDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -10,14 +11,17 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request): View
+    public function show(Request $request, LmsDirectory $lms): View
     {
         $user = $request->user();
+        $summary = $lms->summary($user->nrp);
 
         return view('portal.profile', [
             'user' => $user,
             'visitCount' => $user->visits()->count(),
             'favoriteCount' => $user->favorites()->count(),
+            'menteeCount' => $user->mentees()->where('is_active', true)->count(),
+            'lms' => ($summary['found'] ?? false) ? $summary : null,
         ]);
     }
 

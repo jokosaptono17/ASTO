@@ -23,7 +23,7 @@ class AppLink extends Model
     ];
 
     protected $fillable = [
-        'category_id', 'name', 'tagline', 'url', 'icon_type', 'icon', 'color', 'placement',
+        'category_id', 'name', 'tagline', 'description', 'howto', 'pic_name', 'pic_phone', 'url', 'icon_type', 'icon', 'color', 'placement',
         'badge', 'new_tab', 'is_active', 'health_check', 'sort_order',
     ];
 
@@ -55,6 +55,18 @@ class AppLink extends Model
     public function iconUrl(): ?string
     {
         return $this->icon_type === 'image' ? Storage::disk('public')->url($this->icon) : null;
+    }
+
+    /** Tautan WhatsApp ke PIC aplikasi (null bila nomor kosong). */
+    public function picWhatsapp(?string $text = null): ?string
+    {
+        $number = preg_replace('/\D+/', '', (string) $this->pic_phone);
+        if ($number === '') {
+            return null;
+        }
+        $number = str_starts_with($number, '0') ? '62'.substr($number, 1) : $number;
+
+        return 'https://wa.me/'.$number.($text ? '?text='.rawurlencode($text) : '');
     }
 
     public function host(): string

@@ -25,6 +25,25 @@
                 <input id="phone" name="phone" value="{{ old('phone', $user->phone) }}" maxlength="30" inputmode="tel" class="field">
             </div>
             <div>
+                <label class="label" for="grade">Grade</label>
+                <input id="grade" name="grade" value="{{ old('grade', $user->grade) }}" maxlength="10" class="field" placeholder="M7">
+            </div>
+            <div>
+                <label class="label" for="supervisor">GL wali</label>
+                <input id="supervisor" name="supervisor" value="{{ old('supervisor', $user->supervisor) }}" maxlength="120" class="field" placeholder="Nama GL wali">
+                @if ($user->exists && $user->supervisor)
+                    <p class="mt-1 text-xs {{ $user->supervisor_nrp ? 'text-neon' : 'text-hivis' }}">{{ $user->supervisor_nrp ? 'Tercocokkan dengan NRP '.$user->supervisor_nrp : 'Belum cocok dengan karyawan terdaftar — periksa ejaan nama' }}</p>
+                @endif
+            </div>
+            <div>
+                <label class="label" for="location">Lokasi / area</label>
+                <input id="location" name="location" value="{{ old('location', $user->location) }}" maxlength="100" class="field" placeholder="WS25, Pitstop 40, Embung…">
+            </div>
+            <div>
+                <label class="label" for="program">Program</label>
+                <input id="program" name="program" value="{{ old('program', $user->program) }}" maxlength="20" class="field" placeholder="IDP / MAP">
+            </div>
+            <div>
                 <label class="label" for="role">Peran</label>
                 <select id="role" name="role" class="field">
                     @foreach (\App\Models\User::ROLES as $k => $l) <option value="{{ $k }}" @selected(old('role', $user->role) === $k)>{{ $l }}</option> @endforeach

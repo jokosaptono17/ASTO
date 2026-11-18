@@ -83,6 +83,10 @@ class AppLinkController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:60'],
             'tagline' => ['nullable', 'string', 'max:160'],
+            'description' => ['nullable', 'string', 'max:3000'],
+            'howto' => ['nullable', 'string', 'max:3000'],
+            'pic_name' => ['nullable', 'string', 'max:100'],
+            'pic_phone' => ['nullable', 'regex:/^[0-9+\s-]{9,20}$/'],
             'url' => ['required', 'url:http,https', 'max:500'],
             'category_id' => ['nullable', Rule::exists('categories', 'id')],
             'placement' => ['required', Rule::in(array_keys(AppLink::PLACEMENTS))],
@@ -92,7 +96,7 @@ class AppLinkController extends Controller
             'color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'badge' => ['nullable', 'string', 'max:20'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:100000'],
-        ], ['icon.regex' => 'Kode ikon harus berupa nama ikon Remix, contoh ri-tools-fill.'], [
+        ], ['icon.regex' => 'Kode ikon harus berupa nama ikon Remix, contoh ri-tools-fill.', 'pic_phone.regex' => 'Nomor WhatsApp PIC tidak valid.'], [
             'name' => 'nama', 'url' => 'alamat URL', 'icon_file' => 'file ikon',
         ]);
 
@@ -100,6 +104,10 @@ class AppLinkController extends Controller
         $app->fill([
             'name' => $data['name'],
             'tagline' => $data['tagline'] ?? null,
+            'description' => $data['description'] ?? null,
+            'howto' => $data['howto'] ?? null,
+            'pic_name' => $data['pic_name'] ?? null,
+            'pic_phone' => $data['pic_phone'] ?? null,
             'url' => $data['url'],
             'category_id' => $data['category_id'] ?? null,
             'placement' => $data['placement'],

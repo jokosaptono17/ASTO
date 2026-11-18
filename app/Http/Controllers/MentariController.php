@@ -13,9 +13,10 @@ use Throwable;
 
 /**
  * Chat Mentari.
- * 1. Bila MENTARI_ENDPOINT diatur, pertanyaan + riwayat + konteks diteruskan ke
- *    layanan AI (kontrak sama dengan MekanikPintar, lihat docs/mentari.md).
- * 2. Bila AI belum diatur / gagal, MentariGuide menjawab dengan aturan bawaan.
+ * 1. MentariGuide menjawab pertanyaan berstruktur dari data asli (kartu karyawan,
+ *    aplikasi, training LMS, statistik).
+ * 2. Obrolan bebas diteruskan ke layanan AI bila MENTARI_ENDPOINT diatur
+ *    (kontrak sama dengan MekanikPintar, lihat docs/mentari.md); bila tidak, aturan bawaan.
  */
 class MentariController extends Controller
 {
@@ -29,16 +30,20 @@ class MentariController extends Controller
             'page' => ['nullable', 'string', 'max:60'],
         ]);
 
-        $context = $contexts->for($request->user());
+        $user = $request->user();
+        $context = $contexts->for($user);
         $context['page'] = $data['page'] ?? null;
 
-        if ($endpoint = config('services.mentari.endpoint')) {
-            if ($answer = $this->askAi($endpoint, $data, $context)) {
-                return response()->json($answer + ['source' => 'ai']);
+        // Pertanyaan berstruktur (NRP, data saya, aplikasi, statistik) dijawab dari data asli.
+        // Hanya obrolan bebas yang diteruskan ke AI bila tersambung.
+        $answer = $guide->answer($data['message'], $context, $user);
+        if (in_array($answer['intent'], MentariGuide::AI_INTENTS, true) && ($endpoint = config('services.mentari.endpoint'))) {
+            if ($ai = $this->askAi($endpoint, $data, $context)) {
+                return response()->json($ai + ['cards' => [], 'source' => 'ai']);
             }
         }
 
-        return response()->json($guide->answer($data['message'], $context) + ['source' => 'guide']);
+        return response()->json($answer + ['source' => 'guide']);
     }
 
     private function askAi(string $endpoint, array $data, array $context): ?array
