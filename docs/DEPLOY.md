@@ -24,9 +24,21 @@ composer install --no-dev --optimize-autoloader
 
 ## 3. Konfigurasi
 
+Pastikan Anda berada di `/www/wwwroot/plantasto.my.id` dan di folder itu ada `artisan`
+(bukan subfolder `plantasto.my.id/plantasto.my.id`).
+
+Isi `.env` (nano: simpan **Ctrl+O** lalu Enter, keluar **Ctrl+X**):
+
+| Kunci | Isi |
+| --- | --- |
+| `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | dari aaPanel → Databases |
+| `ADMIN_NRP`, `ADMIN_NAME` | NRP dan nama lengkap Anda (admin pertama) |
+| `APP_URL` | **sementara** `http://plantasto.my.id` — ganti ke `https://` setelah SSL aktif (langkah 5) |
+| `SESSION_SECURE_COOKIE` | **sementara** `false` — ganti ke `true` setelah SSL aktif |
+
 ```bash
 cp .env.example .env
-nano .env        # isi DB_DATABASE, DB_USERNAME, DB_PASSWORD; ADMIN_NRP & ADMIN_NAME = NRP dan nama Anda
+nano .env
 php artisan key:generate
 php artisan migrate --seed --force      # tabel + aplikasi awal + admin pertama dari ADMIN_NRP
 php artisan storage:link
@@ -41,9 +53,12 @@ aaPanel → Website → plantasto.my.id → **Site directory**: Running director
 
 ## 5. Domain & SSL
 
-1. DNS `plantasto.my.id`: ubah record **A** (dan `www`) ke IP VPS. Hapus record CNAME ke GitHub Pages.
+1. Cek IP VPS: `curl -4 ifconfig.me`. Di Hostinger → Domain → DNS/Nameserver:
+   ubah satu record **A `@`** (185.199.108.153) menjadi IP VPS dengan TTL 300, hapus tiga A `@` GitHub lainnya
+   (185.199.109/110/111.153), hapus **CNAME `www`** (jokosaptono17.github.io) lalu tambah **A `www`** → IP VPS.
 2. GitHub → repo ASTO → Settings → Pages: hapus custom domain / matikan Pages.
 3. aaPanel → Website → SSL → Let's Encrypt untuk kedua domain → aktifkan *Force HTTPS*.
+4. Kembalikan `.env`: `APP_URL=https://plantasto.my.id` dan `SESSION_SECURE_COOKIE=true`, lalu `php artisan config:cache`.
 
 ## 6. Cron (lampu status aplikasi)
 
