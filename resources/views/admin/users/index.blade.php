@@ -44,7 +44,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="a-td text-fog">{{ $u->department ?: '–' }}<div class="text-xs text-mist">{{ $u->position }}</div></td>
+                                <td class="a-td text-fog">{{ $u->department ?: '–' }}<div class="text-xs text-mist">{{ $u->position }}{{ $u->grade && ! str_contains((string) $u->position, $u->grade) ? ' · '.$u->grade : '' }}</div></td>
                                 <td class="a-td">
                                     @if (! $u->is_active) <span class="chip-nonaktif">Nonaktif</span>
                                     @elseif ($u->isActivated()) <span class="chip-tayang">Aktif</span>
@@ -73,7 +73,7 @@
         <aside class="a-card self-start p-5">
             <h2 class="flex items-center gap-2 font-display font-semibold"><i class="ri-file-excel-2-line text-xl text-neon"></i>Impor dari Excel</h2>
             <ol class="mt-3 list-decimal space-y-1 pl-5 text-sm text-fog">
-                <li>Unduh template, isi kolom <b>NRP</b> dan <b>NAMA</b> (Departemen, Jabatan, No HP opsional).</li>
+                <li>Unduh template, isi kolom <b>NRP</b> dan <b>NAMA</b> (Departemen, Jabatan, Grade, GL Wali, Lokasi, Program, No HP opsional).</li>
                 <li>Unggah file .xlsx atau .csv. NRP yang sudah ada diperbarui, PIN-nya tetap.</li>
             </ol>
             <a href="{{ route('admin.users.template') }}" class="btn-ghost mt-4 w-full !min-h-10 text-sm"><i class="ri-download-2-line text-lg"></i> Unduh template</a>

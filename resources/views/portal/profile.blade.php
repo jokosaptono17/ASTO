@@ -13,12 +13,57 @@
                 </div>
             </div>
             <dl class="relative mt-5 grid grid-cols-2 gap-3 text-sm">
-                <div><dt class="text-mist">Departemen</dt><dd class="mt-0.5 font-semibold">{{ $user->department ?: '–' }}</dd></div>
+                <div><dt class="text-mist">Seksi</dt><dd class="mt-0.5 font-semibold">{{ $user->department ?: '–' }}</dd></div>
                 <div><dt class="text-mist">Jabatan</dt><dd class="mt-0.5 font-semibold">{{ $user->position ?: '–' }}</dd></div>
+                @if ($user->grade && ! str_contains((string) $user->position, $user->grade))
+                    <div><dt class="text-mist">Grade</dt><dd class="mt-0.5 font-semibold">{{ $user->grade }}</dd></div>
+                @endif
+                @if ($user->supervisor)
+                    <div><dt class="text-mist">GL wali</dt><dd class="mt-0.5 font-semibold">{{ \Illuminate\Support\Str::title(\Illuminate\Support\Str::lower($user->supervisor)) }}</dd></div>
+                @endif
+                @if ($user->location)
+                    <div><dt class="text-mist">Lokasi</dt><dd class="mt-0.5 font-semibold">{{ $user->location }}</dd></div>
+                @endif
+                @if ($user->program)
+                    <div><dt class="text-mist">Program</dt><dd class="mt-0.5 font-semibold">{{ $user->program }}</dd></div>
+                @endif
                 <div><dt class="text-mist">Aplikasi dibuka</dt><dd class="mt-0.5 font-display text-lg font-semibold">{{ number_format($visitCount, 0, ',', '.') }}</dd></div>
                 <div><dt class="text-mist">Favorit</dt><dd class="mt-0.5 font-display text-lg font-semibold">{{ $favoriteCount }}</dd></div>
             </dl>
         </section>
+
+        {{-- Ringkasan MekanikPintar (bila LMS tersambung) --}}
+        @if ($lms)
+            <section class="rounded-2xl border border-white/[0.06] bg-bench">
+                <div class="grid grid-cols-3 text-center">
+                    <div class="py-3"><p class="font-display text-2xl font-bold text-neon">{{ number_format($lms['points'], 0, ',', '.') }}</p><p class="text-xs text-mist">Poin LMS</p></div>
+                    <div class="border-x border-white/[0.06] py-3"><p class="font-display text-2xl font-bold">{{ $lms['training_count'] }}</p><p class="text-xs text-mist">Training</p></div>
+                    <div class="py-3"><p class="font-display text-2xl font-bold">{{ $lms['certificate_count'] }}</p><p class="text-xs text-mist">Sertifikat</p></div>
+                </div>
+                @if ($lms['trainings'])
+                    <ul class="border-t border-white/[0.06] px-4 py-2">
+                        @foreach (array_slice($lms['trainings'], 0, 3) as $t)
+                            <li class="flex items-center gap-3 py-1.5 text-sm">
+                                <i class="ri-graduation-cap-line text-lg text-neon"></i>
+                                <span class="min-w-0 grow truncate">{{ $t['name'] }}</span>
+                                <span class="shrink-0 text-xs text-mist">{{ $t['date'] ? \Illuminate\Support\Carbon::parse($t['date'])->locale('id')->translatedFormat('M Y') : '' }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+                <button type="button" x-data @click="$dispatch('mentari-open', { ask: 'training saya' })" class="flex w-full items-center justify-center gap-2 border-t border-white/[0.06] py-3 text-sm font-semibold text-neon-soft">
+                    <i class="ri-chat-smile-3-line text-lg"></i> Lihat semua lewat Mentari
+                </button>
+            </section>
+        @endif
+
+        @if ($menteeCount)
+            <button type="button" x-data @click="$dispatch('mentari-open', { ask: 'mekanik asuh saya' })" class="flex w-full items-center gap-3 rounded-2xl border border-white/[0.06] bg-bench p-4 text-left">
+                <i class="ri-team-line text-2xl text-neon"></i>
+                <span class="grow"><span class="block font-semibold">Mekanik asuh</span><span class="text-sm text-mist">{{ $menteeCount }} mekanik dengan Anda sebagai GL wali</span></span>
+                <i class="ri-arrow-right-s-line text-xl text-mist"></i>
+            </button>
+        @endif
 
         @can('manage-content')
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-2xl border border-hivis/30 bg-hivis/[0.07] p-4">

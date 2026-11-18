@@ -116,7 +116,7 @@
     "src": "node_modules/remixicon/fonts/remixicon.woff2"
   },
   "resources/css/app.css": {
-    "file": "assets/app-AGRwVRbZ.css",
+    "file": "assets/app-DYZfI6bi.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -125,7 +125,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BwvaLJp4.js",
+    "file": "assets/app-DjgkhCe6.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

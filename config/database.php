@@ -64,6 +64,36 @@ return [
             ], fn ($value) => $value !== null) : [],
         ],
 
+        // Database LMS MekanikPintar — hanya dibaca (user MySQL khusus dengan izin SELECT)
+        'lms' => [
+            'driver' => 'mysql',
+            'host' => env('LMS_DB_HOST', '127.0.0.1'),
+            'port' => env('LMS_DB_PORT', '3306'),
+            'database' => env('LMS_DB_DATABASE'),
+            'username' => env('LMS_DB_USERNAME'),
+            'password' => env('LMS_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'options' => [PDO::ATTR_TIMEOUT => 3],
+        ],
+
+        // Database sertifikat (sertifikat.mekanikpintar.com) — hanya dibaca
+        'sertifikat' => [
+            'driver' => 'mysql',
+            'host' => env('SERT_DB_HOST', '127.0.0.1'),
+            'port' => env('SERT_DB_PORT', '3306'),
+            'database' => env('SERT_DB_DATABASE'),
+            'username' => env('SERT_DB_USERNAME', env('LMS_DB_USERNAME')),
+            'password' => env('SERT_DB_PASSWORD', env('LMS_DB_PASSWORD', '')),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'options' => [PDO::ATTR_TIMEOUT => 3],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

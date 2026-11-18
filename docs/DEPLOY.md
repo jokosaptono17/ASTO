@@ -75,6 +75,41 @@ Buka https://plantasto.my.id → ketik NRP Anda → konfirmasi nama depan → bu
 Lalu Profil → **Panel admin** → Pengguna → **Impor dari Excel** untuk memasukkan NRP & nama karyawan.
 Tambahkan Admin SHE dengan mengubah peran pengguna di menu Pengguna.
 
+## 8. Sambungkan data training dari MekanikPintar (opsional)
+
+Supaya Mentari bisa menjawab "training saya", menampilkan poin & sertifikat, AstoOne membaca
+database LMS lewat **user MySQL khusus yang hanya bisa SELECT** pada tabel yang diperlukan.
+
+1. Cari nama database LMS dan sertifikat:
+   ```bash
+   grep -E "^DB_DATABASE|^SERTIFIKAT_DB_DATABASE" /www/wwwroot/mekanikpintar.com/.env
+   ```
+2. aaPanel → Databases → **phpMyAdmin** (masuk sebagai root) → tab **SQL**, jalankan (ganti
+   `NAMA_DB_LMS`, `sertifikat_db`, dan password):
+   ```sql
+   CREATE USER 'astoone_ro'@'localhost' IDENTIFIED BY 'GANTI_DENGAN_PASSWORD_PANJANG';
+   GRANT SELECT (id, name, nrp, grade, points) ON `NAMA_DB_LMS`.`users` TO 'astoone_ro'@'localhost';
+   GRANT SELECT ON `NAMA_DB_LMS`.`trainings` TO 'astoone_ro'@'localhost';
+   GRANT SELECT ON `NAMA_DB_LMS`.`training_names` TO 'astoone_ro'@'localhost';
+   GRANT SELECT ON `NAMA_DB_LMS`.`training_registrations` TO 'astoone_ro'@'localhost';
+   GRANT SELECT ON `NAMA_DB_LMS`.`user_historical_trainings` TO 'astoone_ro'@'localhost';
+   GRANT SELECT ON `NAMA_DB_LMS`.`achievements` TO 'astoone_ro'@'localhost';
+   GRANT SELECT ON `NAMA_DB_LMS`.`achievement_user` TO 'astoone_ro'@'localhost';
+   GRANT SELECT ON `sertifikat_db`.`sertifikat` TO 'astoone_ro'@'localhost';
+   FLUSH PRIVILEGES;
+   ```
+   Kolom password & email di tabel `users` LMS tidak ikut diberi izin.
+3. Tambahkan di `.env` AstoOne, lalu `php artisan config:cache`:
+   ```
+   LMS_DB_DATABASE=NAMA_DB_LMS
+   LMS_DB_USERNAME=astoone_ro
+   LMS_DB_PASSWORD=GANTI_DENGAN_PASSWORD_PANJANG
+   SERT_DB_DATABASE=sertifikat_db
+   ```
+4. Uji: masuk AstoOne → Mentari → ketik `training saya`.
+
+Siapa boleh melihat riwayat training: orangnya sendiri, GL walinya, dan Administrator.
+
 ## Update berikutnya
 
 ```bash

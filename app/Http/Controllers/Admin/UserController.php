@@ -47,7 +47,9 @@ class UserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $user = User::create($this->validated($request));
+        $user = new User($this->validated($request));
+        $user->resolveSupervisor();
+        $user->save();
         ActivityLog::record('pengguna', "Menambah pengguna {$user->name} ({$user->nrp})");
 
         return redirect()->route('admin.users.index')->with('toast', "{$user->displayName()} ditambahkan. Ia bisa aktivasi dengan NRP {$user->nrp}.");
@@ -64,7 +66,9 @@ class UserController extends Controller
         if ($user->is($request->user()) && ($data['role'] !== 'admin' || ! $data['is_active'])) {
             return back()->withInput()->withErrors(['role' => 'Anda tidak bisa menurunkan peran atau menonaktifkan akun sendiri.']);
         }
-        $user->update($data);
+        $user->fill($data);
+        $user->resolveSupervisor();
+        $user->save();
         ActivityLog::record('pengguna', "Mengubah data {$user->name} ({$user->nrp})");
 
         return redirect()->route('admin.users.index')->with('toast', 'Data pengguna disimpan.');
@@ -109,24 +113,24 @@ class UserController extends Controller
         $path = storage_path('app/private/template-karyawan-astoone.xlsx');
         @mkdir(dirname($path), 0775, true);
         Spreadsheet::writeXlsx($path, [
-            ['NRP', 'NAMA', 'DEPARTEMEN', 'JABATAN', 'NO HP'],
-            ['KT17163', 'AHMAD FAUZI', 'PLANT', 'MEKANIK', '081234567890'],
-        ], 'Karyawan', [14, 32, 20, 20, 18]);
+            ['NRP', 'NAMA', 'DEPARTEMEN', 'JABATAN', 'GRADE', 'GL WALI', 'LOKASI', 'PROGRAM', 'NO HP'],
+            ['KT17163', 'AHMAD FAUZI', 'REPAIR HAULING', 'MEKANIK', 'M7', 'MUHAMMAD ASFIANNOOR', 'WS25', 'IDP', '081234567890'],
+        ], 'Karyawan', [14, 32, 20, 18, 8, 28, 14, 10, 18]);
 
         return response()->download($path, 'template-karyawan-astoone.xlsx');
     }
 
     public function export(): BinaryFileResponse
     {
-        $rows = [['NRP', 'NAMA', 'DEPARTEMEN', 'JABATAN', 'NO HP', 'PERAN', 'STATUS', 'LOGIN TERAKHIR']];
+        $rows = [['NRP', 'NAMA', 'DEPARTEMEN', 'JABATAN', 'GRADE', 'GL WALI', 'LOKASI', 'PROGRAM', 'NO HP', 'PERAN', 'STATUS', 'LOGIN TERAKHIR']];
         foreach (User::orderBy('name')->get() as $u) {
-            $rows[] = [$u->nrp, $u->name, $u->department, $u->position, $u->phone, $u->roleLabel(),
+            $rows[] = [$u->nrp, $u->name, $u->department, $u->position, $u->grade, $u->supervisor, $u->location, $u->program, $u->phone, $u->roleLabel(),
                 ! $u->is_active ? 'Nonaktif' : ($u->isActivated() ? 'Aktif' : 'Belum aktivasi'),
                 $u->last_login_at?->format('Y-m-d H:i') ?? '-'];
         }
         $path = storage_path('app/private/karyawan-astoone-'.now()->format('Ymd-His').'.xlsx');
         @mkdir(dirname($path), 0775, true);
-        Spreadsheet::writeXlsx($path, $rows, 'Karyawan', [14, 32, 20, 20, 18, 16, 16, 18]);
+        Spreadsheet::writeXlsx($path, $rows, 'Karyawan', [14, 32, 20, 18, 8, 28, 14, 10, 18, 16, 16, 18]);
 
         return response()->download($path)->deleteFileAfterSend();
     }
@@ -140,6 +144,10 @@ class UserController extends Controller
             'department' => ['nullable', 'string', 'max:100'],
             'position' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:30'],
+            'grade' => ['nullable', 'string', 'max:10'],
+            'supervisor' => ['nullable', 'string', 'max:120'],
+            'location' => ['nullable', 'string', 'max:100'],
+            'program' => ['nullable', 'string', 'max:20'],
             'role' => ['required', Rule::in(array_keys(User::ROLES))],
         ], ['nrp.unique' => 'NRP ini sudah terdaftar.'], ['name' => 'nama', 'role' => 'peran']);
 

@@ -66,6 +66,7 @@ document.addEventListener('alpine:init', () => {
         tip: 0,
         messages: [],
         chips: config.chips || [],
+        placeholder: config.placeholder || 'Tanya Mentari…',
 
         init() {
             const saved = config.storeKey ? store.load(config.storeKey) : null;
@@ -125,7 +126,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 const history = this.messages.slice(-9, -1).map((m) => ({ role: m.role, content: m.text }));
                 const data = await window.postJson(config.url, { message, history, page: config.page });
-                if (data.reply) answer = { text: data.reply, actions: data.actions || [] };
+                if (data.reply) answer = { text: data.reply, actions: data.actions || [], cards: data.cards || [] };
             } catch { /* jaringan putus */ }
 
             answer ??= offlineAnswer(message, config.whatsapp);
