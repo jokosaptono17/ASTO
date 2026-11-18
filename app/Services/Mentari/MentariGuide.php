@@ -148,8 +148,10 @@ class MentariGuide
             $haystack = Str::lower($app['name'].' '.$app['tagline'].' '.$app['category']);
             $score = 0;
             foreach ($tokens as $t) {
-                if (str_contains($name, $t)) {
-                    $score += 3;
+                if (preg_match('/(^|\s)'.preg_quote($t, '/').'/u', $name)) {
+                    $score += 4; // awal kata pada nama: "shop" → Shop Manual
+                } elseif (str_contains($name, $t)) {
+                    $score += 2; // di tengah kata: "shop" → Workshop
                 } elseif (str_contains($haystack, $t)) {
                     $score += 1;
                 }
@@ -161,6 +163,9 @@ class MentariGuide
         if ($scored->isEmpty()) {
             return null;
         }
+        // Hanya tampilkan yang skornya mendekati kecocokan terbaik
+        $best = $scored->first()['score'];
+        $scored = $scored->filter(fn ($a) => $a['score'] >= $best * 0.6)->values();
 
         $top = $scored->take(3);
         $first = $top->first();

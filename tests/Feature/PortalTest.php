@@ -84,6 +84,10 @@ class PortalTest extends TestCase
         $res = $this->actingAs($this->user)->postJson('/mentari/chat', ['message' => 'tolong bukakan scania'])->assertOk();
         $this->assertStringContainsString('Scania WSS', $res->json('reply'));
         $this->assertStringContainsString('/buka/', $res->json('actions.0.href'));
+
+        $res = $this->actingAs($this->user)->postJson('/mentari/chat', ['message' => 'buka shop manual'])->assertOk();
+        $this->assertCount(1, $res->json('actions'));
+        $this->assertSame('Buka Shop Manual', $res->json('actions.0.label'));
     }
 
     public function test_mentari_uses_ai_endpoint_and_filters_links(): void
