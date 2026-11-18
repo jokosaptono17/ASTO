@@ -1,0 +1,191 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/plus-jakarta-sans';
+@import '@fontsource/chakra-petch/500.css';
+@import '@fontsource/chakra-petch/600.css';
+@import '@fontsource/chakra-petch/700.css';
+@import './remixicon.css';
+
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+/*
+ * AstoOne — palet "pit malam": hijau-hitam tambang terbuka, garis kontur
+ * bench berwarna neon, aksen kuning hi-vis seperti rompi & helm safety.
+ */
+@theme {
+    --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Chakra Petch', 'Plus Jakarta Sans Variable', ui-sans-serif, sans-serif;
+
+    --color-pit: #06120d;
+    --color-bench: #0c1d16;
+    --color-ridge: #12291f;
+    --color-seam: #1d3b2e;
+    --color-neon: #3dff8e;
+    --color-neon-soft: #a6ffcb;
+    --color-neon-deep: #0fa85a;
+    --color-hivis: #ffc23d;
+    --color-hivis-deep: #d98b00;
+    --color-mist: #93b3a4;
+    --color-fog: #c9ddd2;
+    --color-ink: #e9f7ef;
+    --color-alarm: #ff5d5d;
+
+    --shadow-glow: 0 0 0 1px rgb(61 255 142 / .35), 0 0 28px rgb(61 255 142 / .25);
+    --ease-snap: cubic-bezier(.2, .9, .25, 1.15);
+}
+
+@layer base {
+    html { -webkit-tap-highlight-color: transparent; color-scheme: dark; }
+    body { @apply bg-pit font-sans text-ink antialiased; }
+    [x-cloak] { display: none !important; }
+    ::selection { background: rgb(61 255 142 / .35); color: #fff; }
+    :focus-visible { outline: 2px solid var(--color-neon); outline-offset: 2px; border-radius: 6px; }
+    input, select, textarea, button { font: inherit; }
+    input[type='date']::-webkit-calendar-picker-indicator,
+    input[type='datetime-local']::-webkit-calendar-picker-indicator { filter: invert(.8); }
+}
+
+@layer components {
+    /* Kontur bench tambang (SVG inline di layout) */
+    .contour { color: var(--color-neon); }
+    .contour path { fill: none; stroke: currentColor; vector-effect: non-scaling-stroke; }
+
+    /* Header beranda */
+    .pit-header {
+        background:
+            radial-gradient(120% 90% at 85% -10%, rgb(61 255 142 / .28), transparent 60%),
+            radial-gradient(80% 70% at 0% 0%, rgb(15 168 90 / .35), transparent 70%),
+            linear-gradient(180deg, #0b2a1b 0%, #071a11 100%);
+    }
+
+    .panel {
+        @apply rounded-[26px] border border-white/[0.07] bg-bench/90 backdrop-blur-xl;
+        box-shadow: 0 24px 48px -24px rgb(0 0 0 / .7), inset 0 1px 0 rgb(255 255 255 / .04);
+    }
+
+    /* Ikon aplikasi */
+    .app-orb {
+        @apply relative grid place-items-center rounded-full transition duration-200;
+        background: radial-gradient(circle at 30% 25%, color-mix(in oklab, var(--app) 85%, white) 0%, var(--app) 45%, color-mix(in oklab, var(--app) 55%, black) 100%);
+        box-shadow: 0 8px 22px -8px color-mix(in oklab, var(--app) 70%, transparent), inset 0 -3px 0 rgb(0 0 0 / .18);
+        color: color-mix(in oklab, var(--app) 18%, #04140c);
+    }
+    .app-chip {
+        @apply relative grid place-items-center rounded-2xl border transition duration-200;
+        background: color-mix(in oklab, var(--app) 13%, transparent);
+        border-color: color-mix(in oklab, var(--app) 30%, transparent);
+        color: var(--app);
+    }
+    a:active .app-orb, a:active .app-chip, button:active .app-chip { transform: scale(.92); }
+
+    .status-dot { @apply absolute h-2.5 w-2.5 rounded-full ring-2 ring-bench; }
+    .status-dot[data-s='up'] { background: var(--color-neon); }
+    .status-dot[data-s='down'] { background: var(--color-alarm); }
+    .status-dot[data-s='unknown'] { display: none; }
+
+    .section-title { @apply font-display text-[1.15rem] font-semibold leading-tight text-ink; }
+    .section-link { @apply inline-flex items-center gap-1 text-sm font-semibold text-neon hover:text-neon-soft; }
+
+    /* Tombol */
+    .btn, .btn-neon, .btn-ghost, .btn-wa { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 text-[15px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40; }
+    .btn-neon { @apply bg-neon text-[#04170d] hover:bg-neon-soft active:scale-[.98]; box-shadow: 0 10px 30px -10px rgb(61 255 142 / .65); }
+    .btn-ghost { @apply border border-white/10 bg-white/[0.04] text-ink hover:bg-white/[0.08]; }
+    .btn-wa { @apply border border-neon/30 bg-neon/10 text-neon-soft hover:bg-neon/20; }
+
+    /* Input */
+    .field { @apply block w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[15px] text-ink placeholder:text-mist/60 transition focus:border-neon/60 focus:bg-white/[0.06] focus:outline-none focus:ring-4 focus:ring-neon/10; }
+    .label { @apply mb-1.5 block text-sm font-medium text-fog; }
+    .error { @apply mt-1.5 flex items-start gap-1.5 text-sm text-alarm; }
+
+    /* PIN */
+    .pin-cell { @apply grid h-14 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] font-display text-2xl text-ink transition; }
+    .pin-cell[data-filled='1'] { @apply border-neon/60 bg-neon/10; box-shadow: 0 0 18px -4px rgb(61 255 142 / .6); }
+    .pin-key { @apply grid h-16 place-items-center rounded-2xl font-display text-[1.6rem] font-medium text-ink transition select-none hover:bg-white/[0.05] active:scale-95 active:bg-neon/15; }
+
+    /* Navigasi bawah */
+    .tabbar {
+        @apply fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[480px] border-t border-white/[0.07] bg-pit/90 backdrop-blur-xl;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tab { @apply relative flex flex-1 flex-col items-center gap-0.5 pt-2.5 pb-2 text-[11px] font-medium text-mist transition; }
+    .tab i { @apply text-[22px] leading-none; }
+    .tab[aria-current='page'] { @apply text-neon; }
+    .tab[aria-current='page']::before { content: ''; @apply absolute top-0 h-[3px] w-8 rounded-b-full bg-neon; box-shadow: 0 0 12px var(--color-neon); }
+
+    .badge-count { @apply absolute -top-1 -right-2 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-alarm px-1 text-[10px] font-bold text-white ring-2 ring-pit; }
+
+    /* Pita peringatan darurat */
+    .hazard { background: repeating-linear-gradient(-45deg, var(--color-hivis) 0 10px, #111 10px 20px); }
+
+    /* Kartu kampanye */
+    .campaign-card { @apply relative block shrink-0 snap-start overflow-hidden rounded-[22px] border border-white/[0.08] bg-ridge; }
+    .campaign-card img { @apply h-full w-full object-cover transition duration-500; }
+    .campaign-card:hover img { transform: scale(1.03); }
+
+    .scroller { @apply flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4; scrollbar-width: none; }
+    .scroller::-webkit-scrollbar { display: none; }
+
+    /* Admin */
+    .a-card { @apply rounded-2xl border border-white/[0.07] bg-bench; }
+    .a-th { @apply px-4 py-3 text-left text-xs font-semibold text-mist; }
+    .a-td { @apply border-t border-white/[0.05] px-4 py-3 align-middle text-sm; }
+    .chip, .chip-tayang, .chip-terjadwal, .chip-berakhir, .chip-nonaktif, .chip-info, .chip-penting, .chip-darurat { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+    .chip-tayang { @apply bg-neon/15 text-neon; }
+    .chip-terjadwal { @apply bg-sky-400/15 text-sky-300; }
+    .chip-berakhir { @apply bg-white/10 text-mist; }
+    .chip-nonaktif { @apply bg-alarm/15 text-red-300; }
+    .chip-info { @apply bg-sky-400/15 text-sky-300; }
+    .chip-penting { @apply bg-hivis/15 text-hivis; }
+    .chip-darurat { @apply bg-alarm/20 text-red-300; }
+    .side-link { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-fog transition hover:bg-white/[0.05] hover:text-ink; }
+    .side-link i { @apply text-lg text-mist; }
+    .side-link[aria-current='page'] { @apply bg-neon/10 text-neon; }
+    .side-link[aria-current='page'] i { @apply text-neon; }
+    .icon-btn { @apply grid h-9 w-9 place-items-center rounded-xl text-mist transition hover:bg-white/[0.06] hover:text-ink; }
+}
+
+/* Masuk bertahap: ikon aplikasi muncul berurutan sekali saat beranda dibuka */
+@keyframes rise { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .5s var(--ease-snap) both; animation-delay: calc(var(--i, 0) * 45ms + 80ms); }
+
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.ticker-sweep::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / .08), transparent);
+    animation: sweep 3.5s ease-in-out infinite;
+}
+
+/* ---------------- Mentari (maskot SVG) ---------------- */
+.mentari { overflow: visible; }
+.mentari .m-float { animation: m-float 4.2s ease-in-out infinite; }
+.mentari .m-shadow { transform-box: fill-box; transform-origin: center; animation: m-shadow 4.2s ease-in-out infinite; }
+.mentari .m-arm-wave { transform-origin: 70px 156px; animation: m-wave 3.2s ease-in-out infinite; }
+.mentari .m-arm-r { transform-origin: 150px 156px; animation: m-arm 4.2s ease-in-out infinite; }
+.mentari .m-head { transform-origin: 110px 136px; animation: m-tilt 7s ease-in-out infinite; }
+.mentari .m-eye { transform-box: fill-box; transform-origin: center; animation: m-blink 5.5s infinite; }
+.mentari [data-eyes] { transition: transform .18s ease-out; }
+.mentari .m-rays { transform-origin: 110px 46px; animation: m-spin 14s linear infinite; }
+.mentari .m-badge { transform-origin: 110px 164px; animation: m-spin 9s linear infinite; }
+.mentari .m-lamp-glow { transform-box: fill-box; transform-origin: center; animation: m-pulse 2.4s ease-in-out infinite; }
+.mentari .m-flame { transform-box: fill-box; transform-origin: 50% 0; animation: m-flame .16s ease-in-out infinite alternate; }
+.mentari .m-orbit { transform-origin: 110px 136px; animation: m-spin 16s linear infinite; }
+.mentari .m-screen { animation: m-screen 1.6s steps(2) infinite; }
+.mentari.m-talking .m-mouth { transform-box: fill-box; transform-origin: center; animation: m-talk .22s ease-in-out infinite alternate; }
+.mentari.m-still * { animation: none !important; }
+@keyframes m-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes m-shadow { 0%, 100% { transform: scaleX(1); opacity: .4; } 50% { transform: scaleX(.8); opacity: .25; } }
+@keyframes m-wave { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-14deg); } 80% { transform: rotate(6deg); } 90% { transform: rotate(-10deg); } }
+@keyframes m-arm { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-5deg); } }
+@keyframes m-tilt { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-3deg); } 65% { transform: rotate(2.5deg); } }
+@keyframes m-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes m-spin { to { transform: rotate(360deg); } }
+@keyframes m-pulse { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.25); opacity: .5; } }
+@keyframes m-flame { from { transform: scaleY(1); opacity: .95; } to { transform: scaleY(.7); opacity: .6; } }
+@keyframes m-screen { 50% { opacity: .35; } }
+@keyframes m-talk { from { transform: scaleY(1); } to { transform: scaleY(1.9); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .mentari *, .rise, .ticker-sweep::after { animation: none !important; }
+    * { scroll-behavior: auto !important; }
+}
