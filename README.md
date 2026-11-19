@@ -10,8 +10,10 @@ Bisa dipasang di HP lewat Chrome (PWA), masuk dengan **NRP + PIN 6 angka**, dan 
 | Aplikasi | Semua aplikasi per kategori, pencarian, favorit (bintang), lampu status online/gangguan |
 | Mentari | Robot mekanik asisten (sama dengan Mentari di MekanikPintar): cari aplikasi, info terbaru, bantuan PIN/NRP, siap disambung ke AI |
 | Info | Pengumuman (info / penting / darurat) + semua kampanye |
+| Absen | Scan QR sesi P5M / safety talk (QR berganti tiap 30 detik), cek fatigue jam tidur, riwayat absensi |
 | Profil | Identitas, ganti PIN, pasang aplikasi, bantuan WhatsApp, panel admin |
 | Panel admin `/admin` | Ringkasan statistik, Kampanye, Pengumuman (Admin SHE & Administrator); Aplikasi, Kategori, Pengguna + impor Excel, Mentari, Pengaturan (Administrator) |
+| Panel absensi `/admin/absensi` | Sesi, layar QR live untuk TV, daftar hadir & belum hadir, catat manual, rekap + ekspor Excel (GL / Host, Admin SHE, Administrator) |
 
 ## Teknologi
 
@@ -22,7 +24,8 @@ di-build di `public/build`, VPS tidak perlu Node.js) · GD untuk kompres gambar 
 
 | Peran | Bisa |
 | --- | --- |
-| Karyawan | Memakai portal |
+| Karyawan | Memakai portal, absen |
+| GL / Host absensi | + membuat & memimpin sesi absensi |
 | Admin SHE | + kelola kampanye & pengumuman |
 | Administrator | + aplikasi, kategori, pengguna, Mentari, pengaturan |
 
@@ -46,3 +49,4 @@ Tes: `php artisan test`
 
 - [docs/DEPLOY.md](docs/DEPLOY.md) — pasang di VPS (aaPanel) untuk `plantasto.my.id`
 - [docs/mentari.md](docs/mentari.md) — kontrak layanan AI Mentari
+- [docs/absensi.md](docs/absensi.md) — panduan absensi P5M / safety talk

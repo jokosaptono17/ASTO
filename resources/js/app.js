@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs';
 import './mentari';
+import './attendance';
 
 window.Alpine = Alpine;
 

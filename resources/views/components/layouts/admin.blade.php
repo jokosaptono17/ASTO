@@ -8,6 +8,7 @@
     $user = auth()->user();
     $nav = [
         ['admin.dashboard', 'ri-dashboard-3-line', 'Ringkasan', 'manage-content', 'admin.dashboard'],
+        ['admin.attendance.index', 'ri-qr-code-line', 'Absensi', 'host-attendance', 'admin.attendance.*'],
         ['admin.campaigns.index', 'ri-image-2-line', 'Kampanye', 'manage-content', 'admin.campaigns.*'],
         ['admin.announcements.index', 'ri-megaphone-line', 'Pengumuman', 'manage-content', 'admin.announcements.*'],
         ['admin.apps.index', 'ri-apps-2-line', 'Aplikasi', 'admin', 'admin.apps.*'],
@@ -31,11 +32,11 @@
            class="fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-white/[0.06] bg-bench transition-transform lg:translate-x-0">
         <div class="relative overflow-hidden px-5 pt-6 pb-5">
             <x-contour class="absolute -top-10 -right-24 h-40 w-80 opacity-40" />
-            <a href="{{ route('admin.dashboard') }}" class="relative flex items-center gap-3">
+            <a href="{{ $user->canManageContent() ? route('admin.dashboard') : route('admin.attendance.index') }}" class="relative flex items-center gap-3">
                 <img src="/images/plant-asto.png" alt="" class="h-10 w-auto">
                 <span class="leading-tight">
                     <span class="block font-display text-lg font-bold">{{ $siteName }}</span>
-                    <span class="block text-xs text-mist">Panel admin</span>
+                    <span class="block text-xs text-mist">{{ $user->canManageContent() ? 'Panel admin' : 'Panel absensi' }}</span>
                 </span>
             </a>
         </div>

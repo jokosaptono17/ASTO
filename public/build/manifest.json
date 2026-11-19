@@ -1,4 +1,24 @@
 {
+  "__commonjsHelpers-CqkleIqs.js": {
+    "file": "assets/_commonjsHelpers-CqkleIqs.js",
+    "name": "_commonjsHelpers"
+  },
+  "_browser-CujOq0-h.js": {
+    "file": "assets/browser-CujOq0-h.js",
+    "name": "browser",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
+  "_jsQR-DTXHP3BW.js": {
+    "file": "assets/jsQR-DTXHP3BW.js",
+    "name": "jsQR",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
   "node_modules/@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-cyrillic-ext-wght-normal.woff2": {
     "file": "assets/plus-jakarta-sans-cyrillic-ext-wght-normal-lLTsRRxN.woff2",
     "src": "node_modules/@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-cyrillic-ext-wght-normal.woff2"
@@ -116,7 +136,7 @@
     "src": "node_modules/remixicon/fonts/remixicon.woff2"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DYZfI6bi.css",
+    "file": "assets/app-B9iGxBhL.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -125,9 +145,13 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-DjgkhCe6.js",
+    "file": "assets/app-CNNCdMmr.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true
+    "isEntry": true,
+    "dynamicImports": [
+      "_browser-CujOq0-h.js",
+      "_jsQR-DTXHP3BW.js"
+    ]
   }
 }

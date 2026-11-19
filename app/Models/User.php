@@ -14,6 +14,7 @@ class User extends Authenticatable
 
     public const ROLES = [
         'user' => 'Karyawan',
+        'gl' => 'GL / Host absensi',
         'she' => 'Admin SHE',
         'admin' => 'Administrator',
     ];
@@ -117,6 +118,12 @@ class User extends Authenticatable
     public function canManageContent(): bool
     {
         return in_array($this->role, ['admin', 'she'], true);
+    }
+
+    /** Boleh membuat & memimpin sesi absensi (P5M, safety talk). */
+    public function canHostAttendance(): bool
+    {
+        return in_array($this->role, ['admin', 'she', 'gl'], true);
     }
 
     public function firstName(): string

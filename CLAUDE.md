@@ -3,7 +3,8 @@
 Portal PWA Plant ASTO: Laravel 12 + Blade + Alpine + Tailwind 4. Bahasa UI & komentar: Indonesia.
 
 - Login NRP + PIN 6 angka (`AuthController`); kolom password Laravel = `users.pin` (`getAuthPasswordName`).
-- Peran: `user`, `she` (kampanye & pengumuman), `admin` — gate `manage-content` dan `admin` di `AppServiceProvider`.
+- Peran: `user`, `gl` (host absensi), `she` (kampanye & pengumuman), `admin` — gate `host-attendance`, `manage-content`, `admin` di `AppServiceProvider`.
+- Absensi (`docs/absensi.md`): `AttendanceSession` (token 6 angka HMAC berganti 30 dtk, `tokenValid`), `AttendanceRecord` (fatigue ≥6j fit / 5–6j coaching / <5j risk), karyawan via `AttendanceController`, host via `Admin\AttendanceSessionController` (+ feed JSON untuk layar live).
 - Model aplikasi = `AppLink` (tabel `apps`). Buka aplikasi lewat route `apps.go` agar kunjungan tercatat.
 - Gambar diolah `ImageService` (GD → WebP) ke disk `public`.
 - Mentari: `MentariController` → `MentariGuide` (+ `PeopleDesk` untuk kartu karyawan/statistik/training) menjawab dari data asli; hanya obrolan bebas ke `MENTARI_ENDPOINT`. Kontrak & aturan lihat data di `docs/mentari.md`.

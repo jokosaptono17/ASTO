@@ -71,7 +71,19 @@
                 <span class="grow"><span class="block font-semibold">Panel admin</span><span class="text-sm text-mist">{{ $user->roleLabel() }} · kelola konten portal</span></span>
                 <i class="ri-arrow-right-s-line text-xl text-mist"></i>
             </a>
+        @elsecan('host-attendance')
+            <a href="{{ route('admin.attendance.index') }}" class="flex items-center gap-3 rounded-2xl border border-hivis/30 bg-hivis/[0.07] p-4">
+                <i class="ri-qr-code-line text-2xl text-hivis"></i>
+                <span class="grow"><span class="block font-semibold">Panel absensi</span><span class="text-sm text-mist">Buat sesi P5M / safety talk & lihat rekap</span></span>
+                <i class="ri-arrow-right-s-line text-xl text-mist"></i>
+            </a>
         @endcan
+
+        <a href="{{ route('attendance.history') }}" class="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-bench p-4">
+            <i class="ri-calendar-check-line text-2xl text-neon"></i>
+            <span class="grow"><span class="block font-semibold">Riwayat absensi</span><span class="text-sm text-mist">P5M, safety talk, dan kegiatan lain</span></span>
+            <i class="ri-arrow-right-s-line text-xl text-mist"></i>
+        </a>
 
         {{-- Pasang aplikasi --}}
         <section x-data class="rounded-2xl border border-white/[0.06] bg-bench p-4">
