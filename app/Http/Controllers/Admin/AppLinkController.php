@@ -15,10 +15,12 @@ use Illuminate\View\View;
 
 class AppLinkController extends Controller
 {
-    public function index(): View
+    public function index(\Illuminate\Http\Request $request): View
     {
         return view('admin.apps.index', [
-            'apps' => AppLink::with('category')->orderByRaw("CASE placement WHEN 'featured' THEN 0 WHEN 'grid' THEN 1 ELSE 2 END")->ordered()->get(),
+            'apps' => AppLink::with('category')
+                ->when($request->query('q'), fn ($q, $s) => $q->where(fn ($w) => $w->where('name', 'like', "%$s%")->orWhere('url', 'like', "%$s%")->orWhere('tagline', 'like', "%$s%")))
+                ->orderByRaw("CASE placement WHEN 'featured' THEN 0 WHEN 'grid' THEN 1 ELSE 2 END")->ordered()->get(),
             'categories' => Category::orderBy('sort_order')->get(),
         ]);
     }

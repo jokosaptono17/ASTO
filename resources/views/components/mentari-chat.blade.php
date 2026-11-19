@@ -28,13 +28,13 @@
     @else
         <template x-teleport="body">
             <div x-show="bubble && !open" x-cloak x-transition.origin.bottom @click="show()"
-                 class="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-1/2 z-40 w-max max-w-[260px] -translate-x-1/2 cursor-pointer rounded-2xl border border-neon/25 bg-bench/95 px-3.5 py-2.5 text-center text-[13px] leading-snug text-ink shadow-xl shadow-black/50 backdrop-blur-md" x-text="bubble"></div>
+                 class="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-1/2 z-40 w-max max-w-[260px] -translate-x-1/2 cursor-pointer lg:right-8 lg:bottom-28 lg:left-auto lg:translate-x-0 lg:rounded-br-md rounded-2xl border border-neon/25 bg-bench/95 px-3.5 py-2.5 text-center text-[13px] leading-snug text-ink shadow-xl shadow-black/50 backdrop-blur-md" x-text="bubble"></div>
         </template>
     @endif
 
     <template x-teleport="body">
-        <div x-show="open" x-cloak @keydown.escape.window="hide()" class="fixed inset-0 z-50 sm:flex sm:items-end sm:justify-center sm:pb-6">
-            <div x-show="open" x-transition.opacity @click="hide()" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div x-show="open" x-cloak @keydown.escape.window="hide()" class="fixed inset-0 z-50 sm:flex sm:items-end sm:justify-center sm:pb-6 lg:justify-end lg:pr-7 lg:pb-7">
+            <div x-show="open" x-transition.opacity @click="hide()" class="absolute inset-0 bg-black/70 backdrop-blur-sm lg:bg-black/40 lg:backdrop-blur-[2px]"></div>
             <section x-show="open"
                      x-transition:enter="transition duration-300 ease-out" x-transition:enter-start="translate-y-10 opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
                      x-transition:leave="transition duration-150" x-transition:leave-end="translate-y-8 opacity-0"

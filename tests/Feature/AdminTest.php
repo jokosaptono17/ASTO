@@ -125,6 +125,37 @@ class AdminTest extends TestCase
         $this->assertSame('6281234567890', Setting::whatsappNumber());
     }
 
+    public function test_hero_photo_can_be_replaced_and_reset(): void
+    {
+        $admin = User::factory()->admin()->activated()->create();
+        $base = ['site_name' => 'AstoOne', 'site_tagline' => 'Portal', 'slogan' => 'KITA SATU', 'help_whatsapp' => '081313333315',
+            'help_message' => 'Halo', 'mentari_greeting' => 'Hai', 'campaign_section_title' => 'Kampanye'];
+
+        $this->assertSame('/images/hero-default.webp', Setting::hero()['src']);
+        $this->get('/masuk')->assertSee('/images/hero-default.webp', false);
+
+        $this->actingAs($admin)->put('/admin/pengaturan', $base + ['hero' => UploadedFile::fake()->image('site.jpg', 2600, 1600)])->assertSessionHasNoErrors();
+        $path = Setting::get('hero_image');
+        Storage::disk('public')->assertExists($path);
+        $this->assertStringContainsString($path, Setting::hero()['src']);
+        $this->actingAs($admin)->get('/')->assertSee($path, false)->assertSee('Mau buka apa hari ini?');
+
+        $this->actingAs($admin)->put('/admin/pengaturan', $base + ['hero_reset' => 1])->assertSessionHasNoErrors();
+        Storage::disk('public')->assertMissing($path);
+        $this->assertSame('/images/hero-default.webp', Setting::hero()['src']);
+    }
+
+    public function test_desktop_admin_shell_and_dashboard_widgets(): void
+    {
+        $admin = User::factory()->admin()->activated()->create();
+        $this->actingAs($admin)->get('/admin')->assertOk()
+            ->assertSee('Absensi hari ini')->assertSee('Aktivasi per seksi')->assertSee('Status aplikasi')
+            ->assertSee('Cari menu, pengguna, aplikasi')->assertSee('Jadwal rutin');
+        $gl = User::factory()->activated()->create(['role' => 'gl']);
+        $this->actingAs($gl)->get('/admin/absensi')->assertOk()->assertSee('Sesi & event')->assertDontSee('Pengaturan');
+        $this->actingAs($admin)->get('/admin/aplikasi?q=monata')->assertOk()->assertSee('Monata');
+    }
+
     public function test_announcement_crud_by_she(): void
     {
         $she = User::factory()->she()->activated()->create();

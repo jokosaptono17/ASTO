@@ -7,6 +7,9 @@ use App\Models\ActivityLog;
 use App\Models\Announcement;
 use App\Models\AppLink;
 use App\Models\AppVisit;
+use App\Models\AttendanceRecord;
+use App\Models\AttendanceSchedule;
+use App\Models\AttendanceSession;
 use App\Models\Campaign;
 use App\Models\CampaignClick;
 use App\Models\User;
@@ -40,7 +43,33 @@ class DashboardController extends Controller
             ->with('app')->get()->filter(fn ($v) => $v->app);
 
 
+        // Absensi hari ini
+        AttendanceSchedule::ensureSessions();
+        $todaySessions = AttendanceSession::with('type')->whereDate('date', today())
+            ->withCount([
+                'records',
+                'records as risk_count' => fn ($q) => $q->where('fatigue', 'risk'),
+                'records as unverified_count' => fn ($q) => $q->where('geo_status', 'unverified'),
+            ])->orderBy('opens_at')->get()
+            ->each(fn (AttendanceSession $s) => $s->setAttribute('expected_count', $s->target_departments ? User::where('is_active', true)->whereIn('department', $s->target_departments)->count() : null));
+        $attendanceToday = AttendanceRecord::whereDate('checked_in_at', today());
+
+        // Aktivasi akun per seksi (8 seksi terbesar)
+        $byDept = User::where('is_active', true)->whereNotNull('department')
+            ->selectRaw('department, COUNT(*) as total, SUM(CASE WHEN pin IS NOT NULL THEN 1 ELSE 0 END) as activated')
+            ->groupBy('department')->orderByDesc('total')->limit(8)->get();
+
         return view('admin.dashboard', [
+            'todaySessions' => $todaySessions,
+            'attendance' => [
+                'present' => (clone $attendanceToday)->count(),
+                'risk' => (clone $attendanceToday)->where('fatigue', 'risk')->count(),
+                'coaching' => (clone $attendanceToday)->where('fatigue', 'coaching')->count(),
+                'unverified' => (clone $attendanceToday)->where('geo_status', 'unverified')->count(),
+                'open' => $todaySessions->filter->isOpen()->count(),
+            ],
+            'byDept' => $byDept,
+            'health' => AppLink::active()->where('health_check', true)->orderByRaw("CASE health_status WHEN 'down' THEN 0 WHEN 'unknown' THEN 1 ELSE 2 END")->orderBy('name')->get(),
             'stats' => [
                 'users' => User::where('is_active', true)->count(),
                 'activated' => User::where('is_active', true)->whereNotNull('pin')->count(),

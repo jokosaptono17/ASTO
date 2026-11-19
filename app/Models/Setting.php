@@ -43,6 +43,22 @@ class Setting extends Model
         Cache::forget('settings');
     }
 
+    /**
+     * Foto latar hero (beranda desktop & halaman masuk). Bawaan: hutan berkabut;
+     * bisa diganti admin di Pengaturan.
+     *
+     * @return array{src: string, srcset: ?string}
+     */
+    public static function hero(): array
+    {
+        $path = static::get('hero_image');
+        if ($path && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return ['src' => \Illuminate\Support\Facades\Storage::disk('public')->url($path), 'srcset' => null];
+        }
+
+        return ['src' => '/images/hero-default.webp', 'srcset' => '/images/hero-default-960.webp 960w, /images/hero-default.webp 1920w'];
+    }
+
     public static function whatsappNumber(): string
     {
         $number = preg_replace('/\D+/', '', (string) static::get('help_whatsapp'));

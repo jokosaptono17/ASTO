@@ -1,6 +1,27 @@
 <x-layouts.admin title="Pengaturan">
-    <form method="POST" action="{{ route('admin.settings.update') }}" class="max-w-3xl space-y-5">
+    <form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" class="max-w-3xl space-y-5">
         @csrf @method('PUT')
+        <section class="a-card overflow-hidden" x-data="{ preview: @js($hero['src']), reset: false }">
+            <div class="relative aspect-[3/1] bg-pit">
+                <img :src="preview" alt="" class="absolute inset-0 h-full w-full object-cover" :class="reset && 'opacity-30'">
+                <div class="absolute inset-0 bg-gradient-to-t from-pit via-pit/30 to-pit/10"></div>
+                <x-contour class="absolute inset-0 h-full w-full opacity-30 mix-blend-screen" />
+                <div class="absolute bottom-4 left-5">
+                    <p class="font-display text-xl font-bold">Foto latar</p>
+                    <p class="text-sm text-fog">Hero beranda desktop & halaman masuk</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 p-5">
+                <label class="btn-ghost !min-h-10 cursor-pointer text-sm"><i class="ri-image-add-line text-lg"></i> Ganti foto
+                    <input type="file" name="hero" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="const f = $event.target.files[0]; if (f) { preview = URL.createObjectURL(f); reset = false }">
+                </label>
+                @if ($heroCustom)
+                    <label class="flex items-center gap-2 text-sm text-fog"><input type="checkbox" name="hero_reset" value="1" x-model="reset" class="h-4 w-4 accent-[var(--color-neon)]"> Kembalikan ke foto bawaan</label>
+                @endif
+                <p class="w-full text-xs text-mist">Disarankan foto lanskap ≥ 1920 px lebar (mis. foto jobsite ASTO). Dipotong otomatis ke rasio 2:1. Pastikan foto milik sendiri atau boleh dipakai.</p>
+                @error('hero') <p class="error w-full">{{ $message }}</p> @enderror
+            </div>
+        </section>
         <section class="a-card grid gap-5 p-5 sm:grid-cols-2">
             <h2 class="font-display font-semibold sm:col-span-2">Identitas portal</h2>
             <div>

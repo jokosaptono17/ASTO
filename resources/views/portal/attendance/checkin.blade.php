@@ -1,7 +1,7 @@
 <x-layouts.portal :title="'Absen '.$session->type->name">
     @include('portal._topbar', ['heading' => 'Absen', 'back' => route('attendance.scan')])
 
-    <div class="space-y-5 px-4">
+    <div class="space-y-5 px-4 lg:mx-auto lg:max-w-2xl lg:px-0">
         <section class="rounded-[22px] border border-white/[0.07] bg-bench p-4" style="box-shadow: inset 3px 0 0 {{ $session->type->color }}">
             @include('portal.attendance._session-head', ['session' => $session])
         </section>

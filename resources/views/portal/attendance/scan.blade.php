@@ -1,9 +1,9 @@
 <x-layouts.portal title="Absen">
     @include('portal._topbar', ['heading' => 'Absen', 'sub' => 'P5M, safety talk, dan kegiatan lainnya', 'back' => route('home')])
 
-    <div class="space-y-5 px-4" x-data="attendancePicker(@js(route('attendance.locate')), @js($mapped))">
+    <div class="space-y-5 px-4 lg:grid lg:grid-cols-[400px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0 lg:px-0" x-data="attendancePicker(@js(route('attendance.locate')), @js($mapped))">
         {{-- Radar lokasi --}}
-        <section class="relative overflow-hidden rounded-[26px] border bg-gradient-to-b to-pit px-5 pt-6 pb-5 transition-colors"
+        <section class="relative overflow-hidden rounded-[26px] border bg-gradient-to-b to-pit px-5 pt-6 pb-5 transition-colors lg:sticky lg:top-24 lg:row-span-2"
                  :class="{ neon: 'border-neon/30 from-neon/[0.10]', hivis: 'border-hivis/40 from-hivis/[0.10]', alarm: 'border-alarm/50 from-alarm/[0.12]' }[tone]">
             <x-contour class="absolute inset-0 h-full w-full opacity-30" />
             <div class="relative flex items-center gap-5">
@@ -25,7 +25,7 @@
         </section>
 
         {{-- Kegiatan yang sedang dibuka --}}
-        <section>
+        <section class="lg:col-start-2">
             <h2 class="section-title">Pilih kegiatan</h2>
             <div class="mt-3 space-y-2.5">
                 @forelse ($sessions as $s)
@@ -77,7 +77,7 @@
 
         {{-- Scan QR layar event (mode paling ketat) --}}
         <section x-data="{ open: {{ $errors->has('token') ? 'true' : 'false' }} }" @open-scanner.window="open = true; $nextTick(() => $refs.scanner.scrollIntoView({ behavior: 'smooth', block: 'center' }))"
-                 class="rounded-2xl border border-white/[0.07] bg-bench">
+                 class="rounded-2xl border border-white/[0.07] bg-bench lg:col-start-2">
             <button type="button" @click="open = !open" class="flex w-full items-center gap-3 p-4 text-left">
                 <i class="ri-qr-scan-2-line text-2xl text-neon"></i>
                 <span class="grow leading-tight"><span class="block font-semibold">Scan QR di layar event</span><span class="text-xs text-mist">Untuk sesi yang menampilkan QR berganti di TV</span></span>
@@ -118,7 +118,7 @@
             </div>
         </section>
 
-        <a href="{{ route('attendance.history') }}" class="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-bench p-4">
+        <a href="{{ route('attendance.history') }}" class="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-bench p-4 lg:col-start-2">
             <i class="ri-calendar-check-line text-2xl text-neon"></i>
             <span class="grow font-semibold">Riwayat absensi saya</span>
             <i class="ri-arrow-right-s-line text-xl text-mist"></i>

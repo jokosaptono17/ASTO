@@ -9,7 +9,7 @@
     $fatigue = $done?->myRecord?->fatigue ? \App\Models\AttendanceRecord::FATIGUE[$done->myRecord->fatigue] : null;
     $tone = ['neon' => 'text-neon', 'hivis' => 'text-hivis', 'alarm' => 'text-alarm'];
 @endphp
-<section class="mx-4 mt-4"
+<section class="mx-4 mt-4 lg:mx-0 lg:mt-0"
          x-data="homeAttendance(@js(route('attendance.locate')), @js(match ($state) { 'open' => [$primary->opens_at->timestamp, $primary->closes_at->timestamp], 'next' => [null, $next->opens_at->timestamp], 'done' => $next ? [null, $next->opens_at->timestamp] : null, default => null }))">
     <div class="relative overflow-hidden rounded-[24px] border {{ $state === 'open' ? 'border-neon/40 bg-gradient-to-br from-neon/[0.13] via-bench to-bench' : 'border-white/[0.08] bg-bench' }}">
         <x-contour class="pointer-events-none absolute -top-12 -right-16 h-52 w-72 opacity-25" />

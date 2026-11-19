@@ -1,9 +1,10 @@
 <x-layouts.guest title="Masuk">
     @include('auth._brand')
 
-    <div class="mt-auto pt-10">
+    <div class="mt-auto pt-10 lg:mt-12 lg:pt-0">
         <x-mentari :size="132" class="mb-2 -ml-3" />
-        <h1 class="font-display text-[2rem] leading-[1.05] font-bold text-balance">Satu pintu untuk semua aplikasi Plant ASTO</h1>
+        <h1 class="font-display text-[2rem] leading-[1.05] font-bold text-balance lg:hidden">Satu pintu untuk semua aplikasi Plant ASTO</h1>
+        <h1 class="hidden font-display text-[2.2rem] leading-[1.05] font-bold lg:block">Masuk</h1>
         <p class="mt-3 max-w-[34ch] text-[15px] leading-relaxed text-fog">Masuk dengan NRP Anda. Pertama kali? Anda akan diminta membuat PIN 6 angka.</p>
     </div>
 

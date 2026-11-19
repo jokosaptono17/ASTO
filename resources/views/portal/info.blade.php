@@ -1,7 +1,9 @@
 <x-layouts.portal title="Info">
     @include('portal._topbar', ['heading' => 'Info', 'sub' => 'Pengumuman dan kampanye Plant ASTO'])
 
-    <section class="px-4" aria-label="Pengumuman">
+    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start lg:gap-10">
+    <section class="px-4 lg:px-0" aria-label="Pengumuman">
+        <h2 class="section-title mb-4 hidden lg:block">Pengumuman</h2>
         @forelse ($announcements as $a)
             @php $new = ! $seenAt || $a->publishedAt()->gt($seenAt); @endphp
             <a href="{{ route('info.show', $a) }}" class="mb-2.5 flex gap-3 rounded-2xl border p-4 transition hover:border-white/15
@@ -30,10 +32,10 @@
         @endforelse
     </section>
 
-    <section id="kampanye" class="mt-8 px-4">
+    <section id="kampanye" class="mt-8 px-4 lg:sticky lg:top-24 lg:mt-0 lg:px-0">
         <h2 class="section-title">{{ \App\Models\Setting::get('campaign_section_title') }}</h2>
         @if ($campaigns->isNotEmpty())
-            <div class="mt-3 grid grid-cols-2 gap-3">
+            <div class="mt-3 grid grid-cols-2 gap-3 lg:mt-4 lg:gap-4">
                 @foreach ($campaigns as $c)
                     <a href="{{ route('campaigns.open', $c) }}" @if ($c->link_url && ! str_starts_with($c->link_url, '/')) target="_blank" rel="noopener" @endif
                        class="campaign-card {{ $c->format === 'banner' ? 'col-span-2 aspect-[2/1]' : 'aspect-[4/5]' }}">
@@ -45,4 +47,5 @@
             <p class="mt-3 text-sm text-mist">Belum ada kampanye yang tayang.</p>
         @endif
     </section>
+    </div>
 </x-layouts.portal>

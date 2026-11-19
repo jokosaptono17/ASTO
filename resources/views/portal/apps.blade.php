@@ -2,12 +2,12 @@
     <div x-data="appsPage(@js($searchIndex), @js($favoriteIds), @js($tab))">
         @include('portal._topbar', ['heading' => 'Aplikasi', 'sub' => 'Semua sistem Plant ASTO di satu tempat'])
 
-        <div class="sticky top-0 z-20 space-y-3 bg-pit/90 px-4 pt-1 pb-3 backdrop-blur-xl">
-            <div class="relative">
+        <div class="sticky top-0 z-20 space-y-3 bg-pit/90 px-4 pt-1 pb-3 backdrop-blur-xl lg:top-[72px] lg:flex lg:items-center lg:gap-4 lg:space-y-0 lg:border-b lg:border-white/[0.06] lg:px-0 lg:py-4">
+            <div class="relative lg:w-[420px]">
                 <i class="ri-search-line pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-xl text-mist"></i>
                 <input x-model="q" type="search" placeholder="Cari aplikasi" class="field h-12 rounded-full pl-12">
             </div>
-            <div class="flex gap-2" role="tablist">
+            <div class="flex gap-2 lg:ml-auto" role="tablist">
                 <button type="button" role="tab" @click="tab = 'semua'" :aria-selected="tab === 'semua'" :class="tab === 'semua' ? 'bg-neon text-[#04170d]' : 'bg-white/[0.05] text-fog'" class="rounded-full px-4 py-2 text-sm font-semibold transition">Semua</button>
                 <button type="button" role="tab" @click="tab = 'favorit'" :aria-selected="tab === 'favorit'" :class="tab === 'favorit' ? 'bg-neon text-[#04170d]' : 'bg-white/[0.05] text-fog'" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition">
                     <i class="ri-star-fill"></i> Favorit <span class="opacity-70" x-text="favs.length ? `(${favs.length})` : ''"></span>
@@ -15,15 +15,15 @@
             </div>
         </div>
 
-        <div class="space-y-7 px-4 pt-2">
+        <div class="space-y-7 px-4 pt-2 lg:space-y-10 lg:px-0 lg:pt-8">
             @foreach ($groups as $group)
                 <section x-show="anyVisible(@js($group['apps']->pluck('id')))">
-                    <h2 class="flex items-center gap-2 text-[15px] font-semibold text-fog">
+                    <h2 class="flex items-center gap-2 text-[15px] font-semibold text-fog lg:font-display lg:text-xl lg:text-ink">
                         <i class="{{ $group['category']->icon }} text-lg text-neon"></i>{{ $group['category']->name }}
                     </h2>
-                    <ul class="mt-2.5 space-y-2">
+                    <ul class="mt-2.5 space-y-2 lg:mt-4 lg:grid lg:grid-cols-3 lg:gap-4 lg:space-y-0">
                         @foreach ($group['apps'] as $app)
-                            <li x-show="visible({{ $app->id }})" class="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-bench p-3">
+                            <li x-show="visible({{ $app->id }})" class="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-bench p-3 transition lg:p-4 lg:hover:-translate-y-0.5 lg:hover:border-neon/30 lg:hover:shadow-[0_18px_40px_-20px_rgba(61,255,142,.35)]">
                                 <a href="{{ route('apps.go', $app) }}" @if ($app->new_tab) target="_blank" rel="noopener" @endif class="flex min-w-0 grow items-center gap-3">
                                     <x-app-icon :app="$app" variant="chip" :size="48" />
                                     <span class="min-w-0">
@@ -32,6 +32,12 @@
                                             @if ($app->badge) <span class="chip-penting shrink-0">{{ $app->badge }}</span> @endif
                                         </span>
                                         <span class="line-clamp-2 text-[13px] leading-snug text-mist">{{ $app->tagline ?: $app->host() }}</span>
+                                        <span class="mt-1 hidden items-center gap-1.5 text-xs text-mist/80 lg:flex">
+                                            @if ($app->health_check && $app->health_status === 'down') <span class="h-1.5 w-1.5 rounded-full bg-alarm"></span> Gangguan ·
+                                            @elseif ($app->health_check && $app->health_status === 'up') <span class="h-1.5 w-1.5 rounded-full bg-neon"></span> Normal ·
+                                            @endif
+                                            {{ $app->host() }}
+                                        </span>
                                     </span>
                                 </a>
                                 <button type="button" @click="toggleFav({{ $app->id }}, @js(route('apps.favorite', $app)))" :aria-pressed="favs.includes({{ $app->id }})"

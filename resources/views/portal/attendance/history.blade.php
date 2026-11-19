@@ -1,8 +1,8 @@
 <x-layouts.portal title="Riwayat absensi">
     @include('portal._topbar', ['heading' => 'Riwayat absensi', 'back' => route('attendance.scan')])
 
-    <div class="space-y-5 px-4">
-        <section class="grid grid-cols-4 overflow-hidden rounded-2xl border border-white/[0.07] bg-bench text-center">
+    <div class="space-y-5 px-4 lg:px-0">
+        <section class="grid grid-cols-4 overflow-hidden rounded-2xl border border-white/[0.07] bg-bench text-center lg:py-2">
             @foreach ([['Bulan ini', $stats['month'], 'text-neon'], ['Terlambat', $stats['late'], $stats['late'] ? 'text-hivis' : ''], ['Pemateri', $stats['speaker'], ''], ['Rata tidur', $stats['avgSleep'] ? intdiv($stats['avgSleep'], 60).'j'.($stats['avgSleep'] % 60 ? ' '.($stats['avgSleep'] % 60).'m' : '') : '–', '']] as $i => [$label, $value, $tone])
                 <div class="py-3 {{ $i ? 'border-l border-white/[0.06]' : '' }}">
                     <p class="font-display text-xl font-bold {{ $tone }}">{{ $value }}</p>
@@ -11,6 +11,7 @@
             @endforeach
         </section>
 
+        <div class="space-y-5 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
         @forelse ($records as $r)
             @php $f = $r->fatigue ? \App\Models\AttendanceRecord::FATIGUE[$r->fatigue] : null; @endphp
             <article class="flex gap-3 rounded-2xl border border-white/[0.06] bg-bench p-3.5" style="box-shadow: inset 3px 0 0 {{ $r->session->type->color }}">
@@ -29,11 +30,12 @@
                 </div>
             </article>
         @empty
-            <div class="flex flex-col items-center rounded-[22px] border border-dashed border-white/10 px-6 py-10 text-center">
+            <div class="flex flex-col items-center rounded-[22px] border border-dashed border-white/10 px-6 py-10 text-center lg:col-span-2">
                 <i class="ri-calendar-check-line text-4xl text-mist/50"></i>
                 <p class="mt-3 text-fog">Belum ada absensi. Scan QR di layar P5M atau safety talk untuk absen.</p>
             </div>
         @endforelse
+        </div>
 
         {{ $records->links('admin.pagination') }}
     </div>

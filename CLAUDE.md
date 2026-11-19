@@ -11,4 +11,5 @@ Portal PWA Plant ASTO: Laravel 12 + Blade + Alpine + Tailwind 4. Bahasa UI & kom
 - Data LMS dibaca lewat koneksi read-only `lms`/`sertifikat` (`LmsDirectory`), opsional — semua jalur harus tetap jalan bila tidak diatur.
 - Aset di-build lalu di-commit (`public/build`), karena VPS tidak memakai Node. Setelah ubah CSS/JS/Blade: `npm run build`.
 - Tes: `php artisan test` (SQLite memori). Deploy: `docs/DEPLOY.md`.
+- Desktop (≥ `lg`): portal pakai `partials/desktop-nav` + `desktop-footer`, tabbar disembunyikan; beranda `bleed` dengan hero foto (`Setting::hero()`, bawaan `public/images/hero-default.webp`, bisa diganti di Pengaturan) + panel kaca `portal/_home-desktop`. Admin: sidebar berkelompok, topbar + palet perintah Ctrl+K (`adminPalette`).
 - Desain: palet "pit malam" (`resources/css/app.css` @theme) — hijau-hitam, kontur bench tambang (`x-contour`), neon `#3dff8e`, aksen hi-vis `#ffc23d`; font Plus Jakarta Sans + Chakra Petch.
