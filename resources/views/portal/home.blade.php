@@ -71,25 +71,8 @@
             </button>
         </div>
 
-        {{-- Sesi absensi yang sedang berlangsung --}}
-        @foreach ($attendance as $s)
-            <a href="{{ $s->already ? route('attendance.checkin', $s->code) : ($s->checkin_mode !== 'qr' ? route('attendance.checkin', $s->code) : route('attendance.scan')) }}"
-               class="mx-4 mt-4 flex items-center gap-3 overflow-hidden rounded-2xl border p-3.5 {{ $s->already ? 'border-white/[0.07] bg-bench' : 'border-neon/40 bg-gradient-to-r from-neon/[0.14] to-transparent' }}">
-                <span class="relative grid h-12 w-12 shrink-0 place-items-center rounded-xl" style="background: color-mix(in oklab, {{ $s->type->color }} 18%, transparent); color: {{ $s->type->color }}">
-                    <i class="{{ $s->type->icon }} text-2xl"></i>
-                    @unless ($s->already) <span class="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-neon"></span><span class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-neon"></span> @endunless
-                </span>
-                <span class="min-w-0 grow">
-                    <span class="block truncate font-semibold">{{ $s->type->name }}{{ $s->title ? ' — '.$s->title : '' }}</span>
-                    <span class="block truncate text-sm text-mist">{{ $s->isRoutine() ? $s->opens_at->format('H:i').'–'.$s->closes_at->format('H:i') : $s->starts_at->format('H:i').' · tutup '.$s->closes_at->format('H:i') }}{{ ($place = $s->locationLabel()) ? ' · '.$place : '' }}</span>
-                </span>
-                @if ($s->already)
-                    <span class="chip-tayang shrink-0"><i class="ri-check-line"></i> Sudah</span>
-                @else
-                    <span class="shrink-0 rounded-xl bg-neon px-3 py-2 text-sm font-semibold text-[#04170d]">{{ $s->checkin_mode === 'qr' ? 'Scan' : 'Absen' }}</span>
-                @endif
-            </a>
-        @endforeach
+        {{-- Absensi hari ini --}}
+        @include('portal.attendance._home-card')
 
         {{-- Pengumuman penting / darurat --}}
         @if ($ticker)

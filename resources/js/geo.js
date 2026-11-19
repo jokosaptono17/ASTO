@@ -194,7 +194,7 @@ document.addEventListener('alpine:init', () => {
     }));
 
     /* ---------- Editor area untuk admin ---------- */
-    Alpine.data('areaEditor', (initial = [], others = [], buffer = 25) => ({
+    Alpine.data('areaEditor', (initial = [], others = [], buffer = 25, start = null) => ({
         points: (initial ?? []).map((p) => [Number(p[0]), Number(p[1])]),
         buffer,
         me: null,          // posisi live {lat,lng,acc}
@@ -223,13 +223,14 @@ document.addEventListener('alpine:init', () => {
         },
         buildMap(others) {
             const L = this._L;
-            const start = this.points[0] ?? others.flat()[0] ?? [-3.75, 114.8];
-            const map = L.map(this.$refs.map, { zoomControl: false, attributionControl: true }).setView(start, this.points.length ? 17 : 15);
+            const center = this.points[0] ?? start ?? (this.me && [this.me.lat, this.me.lng]) ?? others[0]?.polygon?.[0] ?? [-3.75, 114.8];
+            const map = L.map(this.$refs.map, { zoomControl: false, attributionControl: true }).setView(center, this.points.length || start || this.me ? 18 : 15);
             this._tiles.satelit = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, maxNativeZoom: 18, attribution: 'Citra © Esri' });
             this._tiles.jalan = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, maxNativeZoom: 19, attribution: '© OpenStreetMap' });
             this._tiles.satelit.addTo(map);
             L.control.zoom({ position: 'topright' }).addTo(map);
-            others.forEach((poly) => poly.length > 2 && L.polygon(poly, { color: '#9fb5aa', weight: 1.5, dashArray: '4 4', fillOpacity: 0.06, interactive: false }).addTo(map));
+            others.forEach((o) => o.polygon?.length > 2 && L.polygon(o.polygon, { color: '#9fb5aa', weight: 1.5, dashArray: '4 4', fillOpacity: 0.06, interactive: false })
+                .bindTooltip(o.name, { permanent: true, direction: 'center', className: 'area-label' }).addTo(map));
             this._poly = L.polygon([], { color: '#3dff8e', weight: 3, fillColor: '#3dff8e', fillOpacity: 0.16 }).addTo(map);
             this._vertices = L.layerGroup().addTo(map);
             this._meRing = L.circle([0, 0], { radius: 1, color: '#ffc23d', weight: 1, fillOpacity: 0.12, interactive: false });
@@ -334,5 +335,94 @@ document.addEventListener('alpine:init', () => {
             return { tone: 'alarm', text: `Posisi Anda ${fmtMeters(d)} di luar area` };
         },
         get json() { return JSON.stringify(this.points); },
+        get coords() { return this.me ? `${this.me.lat.toFixed(6)}, ${this.me.lng.toFixed(6)}` : '–'; },
+        copyCoords() { if (this.me) { navigator.clipboard?.writeText(this.coords); this.$store.toast?.show('Koordinat disalin'); } },
+    }));
+
+    /* ---------- Panel "Lokasi saya sekarang" (halaman Area GPS) ---------- */
+    Alpine.data('myLocation', (areas = []) => ({
+        me: null,
+        error: '',
+        _watch: null,
+        init() {
+            if (!navigator.geolocation) { this.error = 'Perangkat ini tidak punya GPS.'; return; }
+            this._watch = navigator.geolocation.watchPosition(
+                (p) => { this.me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy) }; this.error = ''; },
+                (e) => { this.error = e.code === 1 ? 'Izin lokasi ditolak. Aktifkan Lokasi untuk situs ini di pengaturan browser.' : 'Menunggu sinyal GPS… coba di tempat terbuka.'; },
+                { enableHighAccuracy: true, maximumAge: 0 },
+            );
+            window.addEventListener('pagehide', () => navigator.geolocation.clearWatch(this._watch));
+        },
+        get coords() { return this.me ? `${this.me.lat.toFixed(6)}, ${this.me.lng.toFixed(6)}` : ''; },
+        get quality() {
+            if (!this.me) return { label: 'Mencari sinyal GPS…', tone: 'mist' };
+            const a = this.me.acc;
+            return a <= 8 ? { label: `±${a} m · sangat baik`, tone: 'neon' } : a <= 20 ? { label: `±${a} m · baik`, tone: 'neon' } : a <= 40 ? { label: `±${a} m · sedang`, tone: 'hivis' } : { label: `±${a} m · lemah`, tone: 'alarm' };
+        },
+        distTo(id) {
+            const a = areas.find((x) => x.id === id);
+            if (!this.me || !a?.polygon?.length) return null;
+            return distanceToPolygon(this.me.lat, this.me.lng, a.polygon);
+        },
+        badge(id) {
+            const d = this.distTo(id);
+            if (d === null) return '';
+            const a = areas.find((x) => x.id === id);
+            return d === 0 ? 'Anda di sini' : d <= a.buffer ? `${fmtMeters(d)} · dalam toleransi` : `${fmtMeters(d)} dari Anda`;
+        },
+        get verdict() {
+            if (!this.me) return null;
+            const mapped = areas.filter((a) => a.polygon?.length > 2);
+            if (!mapped.length) return { tone: 'mist', text: 'Belum ada area yang dipetakan.' };
+            const near = mapped.map((a) => ({ a, d: distanceToPolygon(this.me.lat, this.me.lng, a.polygon) })).sort((x, y) => x.d - y.d)[0];
+            if (near.d === 0) return { tone: 'neon', text: `Anda di dalam area ${near.a.name}` };
+            if (near.d <= near.a.buffer) return { tone: 'neon', text: `Anda ${fmtMeters(near.d)} dari ${near.a.name} — masih dalam toleransi` };
+            return { tone: 'hivis', text: `Di luar area. Terdekat: ${near.a.name} (${fmtMeters(near.d)})` };
+        },
+        copy() { if (this.me) { navigator.clipboard?.writeText(this.coords); this.$store.toast?.show('Koordinat disalin'); } },
+    }));
+});
+
+/* ---------- Kartu "Absensi hari ini" di beranda ---------- */
+document.addEventListener('alpine:init', () => {
+    window.Alpine.data('homeAttendance', (locateUrl, times = null) => ({
+        now: Date.now() / 1000,
+        place: null,
+        timer: null,
+        async init() {
+            this.timer = setInterval(() => {
+                this.now = Date.now() / 1000;
+                // Saat absen dibuka/ditutup, muat ulang agar kartu berganti keadaan
+                if (times && times[1] && this.now >= times[1] + 1 && !this._reloaded) { this._reloaded = true; setTimeout(() => location.reload(), 800); }
+            }, 1000);
+            // Posisi hanya dicek bila izin lokasi sudah diberikan (beranda tidak meminta izin)
+            try {
+                const perm = await navigator.permissions?.query({ name: 'geolocation' });
+                if (perm?.state !== 'granted') return;
+                const pos = await bestPosition({ wait: 5000, good: 30 });
+                const res = await fetch(`${locateUrl}?lat=${pos.lat}&lng=${pos.lng}&acc=${pos.acc}`, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                const data = await res.json();
+                if (data.status === 'inside' || (data.status !== 'none' && data.location)) this.place = data;
+            } catch { /* abaikan: kartu tetap tampil tanpa lokasi */ }
+        },
+        get left() { return times?.[1] ? Math.max(0, Math.round(times[1] - this.now)) : 0; },
+        get countdown() {
+            const s = this.left;
+            if (s < 60) return `${s} dtk`;
+            const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+            return h ? `${h} j ${m} mnt` : `${m} mnt`;
+        },
+        get countdownShort() {
+            const s = this.left, h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+            return h ? `${h}:${String(m).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+        },
+        get progress() {
+            if (!times?.[0]) return 0;
+            return Math.min(100, Math.max(0, ((this.now - times[0]) / (times[1] - times[0])) * 100));
+        },
+        get placeText() {
+            if (!this.place) return '';
+            return this.place.status === 'inside' ? this.place.location : `${fmtMeters(this.place.distance)} dari ${this.place.location}`;
+        },
     }));
 });

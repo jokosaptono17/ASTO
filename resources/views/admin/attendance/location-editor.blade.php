@@ -1,9 +1,10 @@
 <x-layouts.admin :title="$location->exists ? 'Area '.$location->name : 'Area baru'">
     @php
-        $others = \App\Models\AttendanceLocation::mapped()->where('id', '!=', $location->id ?? 0)->get()->pluck('polygon')->values();
+        $others = \App\Models\AttendanceLocation::mapped()->where('id', '!=', $location->id ?? 0)->get()->map(fn ($l) => ['name' => $l->name, 'polygon' => $l->polygon])->values();
+        $start = is_numeric(request('lat')) && is_numeric(request('lng')) ? [(float) request('lat'), (float) request('lng')] : null;
     @endphp
     <form method="POST" action="{{ $location->exists ? route('admin.attendance.locations.update', $location) : route('admin.attendance.locations.store') }}"
-          x-data="areaEditor(@js($location->polygon ?? []), @js($others), {{ (int) old('buffer_m', $location->buffer_m) }})"
+          x-data="areaEditor(@js($location->polygon ?? []), @js($others), {{ (int) old('buffer_m', $location->buffer_m) }}, @js($start))"
           class="grid gap-4 lg:grid-cols-[1fr_360px]">
         @csrf
         @if ($location->exists) @method('PUT') @endif
@@ -34,6 +35,28 @@
 
         {{-- Panel kontrol --}}
         <aside class="space-y-4">
+            {{-- Lokasi saya sekarang --}}
+            <section class="a-card p-4">
+                <div class="flex items-center gap-3">
+                    <span class="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl" :class="{ neon: 'bg-neon/15 text-neon', hivis: 'bg-hivis/15 text-hivis', alarm: 'bg-alarm/15 text-alarm', mist: 'bg-white/[0.06] text-mist' }[quality.tone]">
+                        <i class="ri-user-location-line text-2xl" :class="!me && 'animate-pulse'"></i>
+                    </span>
+                    <div class="min-w-0 grow leading-tight">
+                        <p class="text-xs text-mist">Lokasi saya sekarang</p>
+                        <p class="truncate font-display text-[15px] font-semibold" x-text="me ? coords : 'Mencari sinyal GPS…'"></p>
+                        <p class="text-xs" :class="{ neon: 'text-neon', hivis: 'text-hivis', alarm: 'text-red-300', mist: 'text-mist' }[quality.tone]" x-text="me ? quality.label.replace(/^GPS /, 'Akurasi ') : ''"></p>
+                    </div>
+                    <div class="flex shrink-0 gap-1.5">
+                        <button type="button" @click="locateMe()" :disabled="!me" class="icon-btn h-9 w-9 disabled:opacity-40" aria-label="Pusatkan peta ke lokasi saya" title="Pusatkan peta"><i class="ri-focus-3-line"></i></button>
+                        <button type="button" @click="copyCoords()" :disabled="!me" class="icon-btn h-9 w-9 disabled:opacity-40" aria-label="Salin koordinat" title="Salin koordinat"><i class="ri-file-copy-line"></i></button>
+                    </div>
+                </div>
+                <template x-if="myVerdict">
+                    <p class="mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold" :class="myVerdict.tone === 'neon' ? 'bg-neon/10 text-neon' : 'bg-alarm/10 text-red-300'"><i class="ri-map-pin-user-line"></i> <span x-text="myVerdict.text"></span></p>
+                </template>
+                <p x-show="!me && markNote" x-cloak class="mt-2 text-xs text-hivis" x-text="markNote"></p>
+            </section>
+
             <section class="a-card space-y-4 p-4">
                 {{-- Tombol utama: tandai titik --}}
                 <button type="button" @click="markHere()" :disabled="!me || marking || walking"
@@ -78,9 +101,6 @@
                 </div>
                 <input id="buffer_m" name="buffer_m" type="range" min="0" max="100" step="5" x-model.number="buffer" class="w-full accent-[var(--color-neon)]">
                 <p class="text-xs text-mist">Karyawan yang berdiri sedikit di luar garis (mis. parkiran) tetap dihitung di area. Disarankan 20–30 m.</p>
-                <template x-if="myVerdict">
-                    <p class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold" :class="myVerdict.tone === 'neon' ? 'bg-neon/10 text-neon' : 'bg-alarm/10 text-red-300'"><i class="ri-user-location-line"></i> <span x-text="myVerdict.text"></span></p>
-                </template>
                 <label class="flex items-center gap-2 text-sm"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $location->is_active ?? true)) class="h-4 w-4 accent-[var(--color-neon)]"> Area aktif</label>
             </section>
 

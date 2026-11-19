@@ -158,7 +158,8 @@ class AttendanceGeoTest extends TestCase
         $quarry = AttendanceLocation::firstWhere('name', 'Quarry');
 
         $this->actingAs($gl)->get('/admin/absensi/lokasi')->assertForbidden();
-        $this->actingAs($admin)->get('/admin/absensi/lokasi')->assertOk()->assertSee('Belum dipetakan');
+        $this->actingAs($admin)->get('/admin/absensi/lokasi')->assertOk()->assertSee('Belum dipetakan')->assertSee('Lokasi saya sekarang');
+        $this->actingAs($admin)->get('/admin/absensi/lokasi/baru?lat=-3.75&lng=114.8')->assertOk()->assertSee('Lokasi saya sekarang');
         $this->actingAs($admin)->get("/admin/absensi/lokasi/{$quarry->id}")->assertOk()->assertSee('Tandai titik di sini');
         $this->actingAs($admin)->put("/admin/absensi/lokasi/{$quarry->id}", ['name' => 'Quarry', 'buffer_m' => 30, 'is_active' => 1, 'polygon' => json_encode([[-3.76, 114.81], [-3.76, 114.811]])])
             ->assertSessionHasErrors('polygon');
@@ -199,6 +200,21 @@ class AttendanceGeoTest extends TestCase
         $shift2 = AttendanceSession::where('shift', '2')->whereNotNull('attendance_schedule_id')->first();
         $this->actingAs($admin)->delete("/admin/absensi/jadwal/{$shift2->attendance_schedule_id}");
         $this->assertNull($shift2->fresh());
+    }
+
+    public function test_home_card_shows_open_done_and_next_states(): void
+    {
+        $s = $this->p5m();   // Sabtu 06:10: P5M shift 1 & Safety Talk dibuka
+        $this->actingAs($this->mech)->get('/')->assertOk()->assertSee('Absensi hari ini')->assertSee('Absen sedang dibuka')
+            ->assertSee('+1 kegiatan lain sedang dibuka', false);
+
+        $this->actingAs($this->mech)->post("/absen/{$s->code}", ['role' => 'audience', 'sleep_at' => '21:30', 'wake_at' => '04:00'] + self::INSIDE);
+        $st = AttendanceSession::whereHas('type', fn ($q) => $q->where('name', 'Safety Talk'))->first();
+        $this->actingAs($this->mech)->post("/absen/{$st->code}", ['role' => 'audience', 'sleep_at' => '21:30', 'wake_at' => '04:00'] + self::INSIDE);
+        $this->actingAs($this->mech)->get('/')->assertSee('Sudah absen')->assertSee('WS 25')->assertSee('Fit to Work')->assertSee('Berikutnya P5M Shift 2', false);
+
+        $this->goTo('2026-11-21 12:00');
+        $this->actingAs($this->other)->get('/')->assertSee('Berikutnya')->assertSee('Dibuka 17:30');
     }
 
     public function test_poster_and_permissions_policy(): void

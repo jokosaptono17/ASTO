@@ -36,7 +36,7 @@ class HomeController extends Controller
             'unread' => $this->unread($user, $announcements),
             'searchIndex' => $apps->map->toClient()->values(),
             'campaignTitle' => Setting::get('campaign_section_title'),
-            'attendance' => AttendanceController::openFor($user),
+            'attendance' => AttendanceController::todayFor($user),
         ]);
     }
 
