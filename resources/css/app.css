@@ -149,6 +149,14 @@
 @keyframes rise { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
 .rise { animation: rise .5s var(--ease-snap) both; animation-delay: calc(var(--i, 0) * 45ms + 80ms); }
 
+/* Absensi: garis pindai & centang sukses */
+@keyframes scan { 0%, 100% { top: 8%; } 50% { top: 92%; } }
+.scan-line { animation: scan 2.4s ease-in-out infinite; }
+@keyframes pop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+.checkin-pop { animation: pop .6s var(--ease-snap) both; box-shadow: 0 0 0 10px rgb(61 255 142 / .12), 0 0 60px rgb(61 255 142 / .45); }
+@keyframes arrive { from { background: rgb(61 255 142 / .18); } to { background: transparent; } }
+.arrive { animation: arrive 3.5s ease-out; }
+
 @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 .ticker-sweep::after {
     content: ''; position: absolute; inset: 0;
@@ -186,6 +194,18 @@
 @keyframes m-talk { from { transform: scaleY(1); } to { transform: scaleY(1.9); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .mentari *, .rise, .ticker-sweep::after { animation: none !important; }
+    .mentari *, .rise, .ticker-sweep::after, .scan-line, .checkin-pop, .arrive { animation: none !important; }
     * { scroll-behavior: auto !important; }
 }
+
+/* ---------- Absensi: radar lokasi & editor area ---------- */
+.radar-ring { position: absolute; inset: 0; border-radius: 9999px; border: 1.5px solid currentColor; opacity: 0; animation: radar 2.4s ease-out infinite; }
+.radar-ring:nth-child(2) { animation-delay: .8s; }
+.radar-ring:nth-child(3) { animation-delay: 1.6s; }
+@keyframes radar { 0% { transform: scale(.35); opacity: .7; } 100% { transform: scale(1.25); opacity: 0; } }
+.area-vertex { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9999px; background: #06120d; border: 2px solid #3dff8e; color: #3dff8e; font: 700 11px/1 'Chakra Petch', sans-serif; box-shadow: 0 0 0 3px rgb(61 255 142 / .2); }
+.leaflet-container.leaflet-container { background: #0c1d16; font-family: inherit; }
+.leaflet-control-attribution { background: rgb(6 18 13 / .7) !important; color: #9fb5aa !important; font-size: 10px; }
+.leaflet-control-attribution a { color: #9fb5aa !important; }
+.leaflet-bar a { background: #0c1d16 !important; color: #e6f2ec !important; border-color: rgb(255 255 255 / .08) !important; }
+@media (prefers-reduced-motion: reduce) { .radar-ring { animation: none; opacity: .3; } }

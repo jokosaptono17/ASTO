@@ -5,26 +5,29 @@
             <x-contour class="absolute inset-0 h-full w-full opacity-60" />
             <div class="relative flex items-center gap-3 pt-2">
                 <img src="/images/plant-asto.png" alt="Plant ASTO" class="h-11 w-auto drop-shadow-[0_6px_14px_rgba(0,0,0,.55)]">
-                <div class="grow leading-tight">
+                <div class="min-w-0 grow leading-tight">
                     <div class="font-display text-[1.45rem] font-bold">{{ $siteName }}</div>
-                    <div class="text-xs text-neon-soft/80">{{ \App\Models\Setting::get('slogan') }}</div>
+                    <div class="truncate text-xs text-neon-soft/80">{{ \App\Models\Setting::get('slogan') }}</div>
                 </div>
-                <a href="{{ route('info.index') }}" class="relative grid h-11 w-11 place-items-center rounded-2xl bg-white/[0.07] ring-1 ring-white/10" aria-label="Info dan pengumuman">
+                <a href="{{ route('attendance.scan') }}" class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-neon/15 text-neon ring-1 ring-neon/40" aria-label="Scan absen">
+                    <i class="ri-qr-scan-2-line text-[22px]"></i>
+                </a>
+                <a href="{{ route('info.index') }}" class="relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/[0.07] ring-1 ring-white/10" aria-label="Info dan pengumuman">
                     <i class="ri-notification-3-line text-[22px]"></i>
                     @if ($unread) <span class="badge-count !top-1.5 !right-1.5">{{ $unread > 9 ? '9+' : $unread }}</span> @endif
                 </a>
-                <a href="{{ \App\Models\Setting::whatsappLink() }}" target="_blank" rel="noopener" class="grid h-11 w-11 place-items-center rounded-2xl bg-white/[0.07] ring-1 ring-white/10" aria-label="Bantuan admin">
+                <a href="{{ \App\Models\Setting::whatsappLink() }}" target="_blank" rel="noopener" class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/[0.07] ring-1 ring-white/10" aria-label="Bantuan admin">
                     <i class="ri-customer-service-2-line text-[22px]"></i>
                 </a>
             </div>
 
             {{-- Strip identitas: sapaan | departemen | NRP --}}
             <div class="relative mt-5 flex items-center divide-x divide-white/15 text-sm">
-                <div class="flex min-w-0 items-center gap-2 pr-3">
+                <div class="flex max-w-[48%] shrink-0 items-center gap-2 pr-3">
                     <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neon font-display text-xs font-bold text-[#04170d]">{{ $user->initials() }}</span>
                     <span class="truncate font-semibold">Halo, {{ $user->firstName() }}</span>
                 </div>
-                <div class="flex min-w-0 items-center gap-1.5 px-3 text-fog">
+                <div class="flex min-w-0 flex-1 items-center gap-1.5 px-3 text-fog">
                     <i class="ri-building-2-line text-neon"></i><span class="truncate">{{ $user->department ?: $user->roleLabel() }}</span>
                 </div>
                 <div class="flex shrink-0 items-center gap-1.5 pl-3 font-display text-fog">
@@ -67,6 +70,26 @@
                 <i class="ri-sparkling-2-line text-xl text-neon" aria-hidden="true"></i>
             </button>
         </div>
+
+        {{-- Sesi absensi yang sedang berlangsung --}}
+        @foreach ($attendance as $s)
+            <a href="{{ $s->already ? route('attendance.checkin', $s->code) : ($s->checkin_mode !== 'qr' ? route('attendance.checkin', $s->code) : route('attendance.scan')) }}"
+               class="mx-4 mt-4 flex items-center gap-3 overflow-hidden rounded-2xl border p-3.5 {{ $s->already ? 'border-white/[0.07] bg-bench' : 'border-neon/40 bg-gradient-to-r from-neon/[0.14] to-transparent' }}">
+                <span class="relative grid h-12 w-12 shrink-0 place-items-center rounded-xl" style="background: color-mix(in oklab, {{ $s->type->color }} 18%, transparent); color: {{ $s->type->color }}">
+                    <i class="{{ $s->type->icon }} text-2xl"></i>
+                    @unless ($s->already) <span class="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-neon"></span><span class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-neon"></span> @endunless
+                </span>
+                <span class="min-w-0 grow">
+                    <span class="block truncate font-semibold">{{ $s->type->name }}{{ $s->title ? ' — '.$s->title : '' }}</span>
+                    <span class="block truncate text-sm text-mist">{{ $s->isRoutine() ? $s->opens_at->format('H:i').'–'.$s->closes_at->format('H:i') : $s->starts_at->format('H:i').' · tutup '.$s->closes_at->format('H:i') }}{{ ($place = $s->locationLabel()) ? ' · '.$place : '' }}</span>
+                </span>
+                @if ($s->already)
+                    <span class="chip-tayang shrink-0"><i class="ri-check-line"></i> Sudah</span>
+                @else
+                    <span class="shrink-0 rounded-xl bg-neon px-3 py-2 text-sm font-semibold text-[#04170d]">{{ $s->checkin_mode === 'qr' ? 'Scan' : 'Absen' }}</span>
+                @endif
+            </a>
+        @endforeach
 
         {{-- Pengumuman penting / darurat --}}
         @if ($ticker)

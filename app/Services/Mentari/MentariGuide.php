@@ -21,9 +21,9 @@ class MentariGuide
 {
     public const CHIPS = [
         'guest' => ['Lupa PIN', 'NRP saya belum terdaftar', 'Cara pasang aplikasi', 'Apa itu AstoOne?'],
-        'user' => ['Data saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?', 'Cari shop manual'],
-        'gl' => ['Mekanik asuh saya', 'Data saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?'],
-        'admin' => ['Statistik portal', 'Siapa yang belum aktivasi?', 'Aplikasi yang gangguan', 'Kampanye paling banyak diklik', 'Data saya'],
+        'user' => ['Data saya', 'Absensi saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?'],
+        'gl' => ['Siapa yang belum absen?', 'Mekanik asuh saya', 'Absensi saya', 'Training saya', 'Info terbaru'],
+        'admin' => ['Statistik portal', 'Siapa yang belum absen?', 'Siapa yang belum aktivasi?', 'Aplikasi yang gangguan', 'Kampanye paling banyak diklik'],
     ];
 
     private const STOPWORDS = ['yang', 'untuk', 'dengan', 'dimana', 'mana', 'buka', 'bukakan', 'tolong', 'mau', 'ingin', 'saya', 'aku', 'aplikasi', 'app', 'apps', 'cari', 'carikan', 'link', 'tautan', 'web', 'website', 'halaman', 'gimana', 'bagaimana', 'cara', 'apa', 'ada', 'tidak', 'bisa', 'minta', 'dong', 'nya', 'itu', 'ini', 'kak', 'min', 'mentari', 'portal', 'astoone', 'sistem', 'system'];
@@ -31,14 +31,14 @@ class MentariGuide
     /** Intent yang boleh diserahkan ke AI bila MENTARI_ENDPOINT diatur. */
     public const AI_INTENTS = ['fallback', 'greeting', 'identity', 'thanks'];
 
-    public function __construct(private PeopleDesk $people) {}
+    public function __construct(private PeopleDesk $people, private AttendanceDesk $attendance) {}
 
     public static function chipsFor(?User $user): array
     {
         return match (true) {
             ! $user => self::CHIPS['guest'],
             $user->isAdmin() => self::CHIPS['admin'],
-            $user->mentees()->exists() => self::CHIPS['gl'],
+            $user->canHostAttendance() || $user->mentees()->exists() => self::CHIPS['gl'],
             default => self::CHIPS['user'],
         };
     }
@@ -61,6 +61,7 @@ class MentariGuide
         $steps = [
             'appKnowledge' => fn () => $this->appKnowledge($q),
             'self' => fn () => $this->people->self($q, $viewer),
+            'attendance' => fn () => $this->attendance->answer($q, $viewer),
             'nrp' => fn () => $this->people->byNrp($message, $q, $viewer),
             'account' => fn () => $this->account($q, $context),
             'install' => fn () => $this->install($q),

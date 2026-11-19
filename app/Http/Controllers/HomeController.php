@@ -6,6 +6,7 @@ use App\Models\Announcement;
 use App\Models\AppLink;
 use App\Models\Campaign;
 use App\Models\Setting;
+use App\Http\Controllers\AttendanceController;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -35,6 +36,7 @@ class HomeController extends Controller
             'unread' => $this->unread($user, $announcements),
             'searchIndex' => $apps->map->toClient()->values(),
             'campaignTitle' => Setting::get('campaign_section_title'),
+            'attendance' => AttendanceController::openFor($user),
         ]);
     }
 
