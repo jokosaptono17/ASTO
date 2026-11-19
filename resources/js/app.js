@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import './mentari';
 import './attendance';
+import './geo';
 
 window.Alpine = Alpine;
 

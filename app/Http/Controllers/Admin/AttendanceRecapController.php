@@ -17,7 +17,7 @@ class AttendanceRecapController extends Controller
     public function index(Request $request): View
     {
         [$from, $to, $query] = $this->query($request);
-        $all = (clone $query)->with('session.type')->get();
+        $all = (clone $query)->with('session.type', 'location')->get();
 
         // Per hari
         $days = collect();
@@ -56,7 +56,7 @@ class AttendanceRecapController extends Controller
             ],
             'days' => $days,
             'sections' => $sections,
-            'records' => (clone $query)->with('session.type')->orderByDesc('checked_in_at')->paginate(30)->withQueryString(),
+            'records' => (clone $query)->with('session.type', 'location')->orderByDesc('checked_in_at')->paginate(30)->withQueryString(),
             'speakers' => $all->where('role', 'pemateri')->groupBy('nrp')->map(fn ($g) => ['name' => $g->first()->name, 'total' => $g->count()])->sortByDesc('total')->take(5)->values(),
         ]);
     }
@@ -64,7 +64,7 @@ class AttendanceRecapController extends Controller
     public function export(Request $request): BinaryFileResponse
     {
         [$from, $to, $query] = $this->query($request);
-        $path = AttendanceExport::write($query->with('session.type')->orderBy('checked_in_at')->get(), 'Rekap');
+        $path = AttendanceExport::write($query->with('session.type', 'location')->orderBy('checked_in_at')->get(), 'Rekap');
 
         return response()->download($path, 'rekap-absensi-'.$from->format('Ymd').'-'.$to->format('Ymd').'.xlsx')->deleteFileAfterSend();
     }
@@ -87,6 +87,8 @@ class AttendanceRecapController extends Controller
             ->when($request->query('department'), fn ($q, $d) => $q->where('department', $d))
             ->when($request->query('fatigue'), fn ($q, $f) => $q->where('fatigue', $f))
             ->when($request->query('late') === '1', fn ($q) => $q->where('is_late', true))
+            ->when($request->query('geo') === 'unverified', fn ($q) => $q->where('geo_status', 'unverified'))
+            ->when($request->query('area'), fn ($q, $a) => $q->where('attendance_location_id', $a))
             ->when($request->query('role') === 'pemateri', fn ($q) => $q->where('role', 'pemateri'))
             ->when($request->query('q'), fn ($q, $s) => $q->where(fn ($w) => $w->where('nrp', 'like', '%'.strtoupper($s).'%')->orWhere('name', 'like', '%'.strtoupper($s).'%')));
 

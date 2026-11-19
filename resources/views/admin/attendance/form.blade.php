@@ -1,10 +1,11 @@
 <x-layouts.admin :title="$session->exists ? 'Ubah sesi' : 'Sesi absensi baru'">
     @php
         $targets = old('target_departments', $session->target_departments ?? []);
+        $areaIds = array_map('intval', old('location_ids', $session->location_ids ?? []));
     @endphp
     <form method="POST" action="{{ $session->exists ? route('admin.attendance.update', $session) : route('admin.attendance.store') }}" class="grid max-w-5xl gap-5 lg:grid-cols-[1fr_300px]"
           x-data="{ type: @js((string) old('attendance_type_id', $session->attendance_type_id)), mode: @js(old('checkin_mode', $session->checkin_mode)), start: @js(old('start_time', $session->starts_at?->format('H:i'))),
-                    before: {{ (int) old('open_before', $open[0]) }}, after: {{ (int) old('open_after', $open[1]) }}, late: {{ (int) old('late_after', $session->late_after) }},
+                    before: {{ (int) old('open_before', $open[0]) }}, after: {{ (int) old('open_after', $open[1]) }}, late: @js(old('late_after', $session->late_after)),
                     fmt(m) { if (!this.start) return '–'; let [h, i] = this.start.split(':').map(Number); let t = (h * 60 + i + m + 1440) % 1440; return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); } }">
         @csrf
         @if ($session->exists) @method('PUT') @endif
@@ -86,14 +87,34 @@
 
             <section class="a-card space-y-5 p-5">
                 <h2 class="font-display font-semibold">Aturan absen</h2>
-                <div class="grid gap-2 sm:grid-cols-2">
-                    @foreach (['qr' => ['Wajib scan QR di lokasi', 'QR / kode berganti tiap 30 detik — mencegah titip absen', 'ri-qr-code-line'], 'open' => ['Cukup dari aplikasi', 'Tombol absen muncul di beranda peserta selama sesi dibuka', 'ri-smartphone-line']] as $k => [$label, $hint, $icon])
+                <div>
+                    <div class="grid gap-2 sm:grid-cols-3">
+                @foreach (['gps' => ['QR tempel + GPS', 'Peserta absen dari QR absensi / beranda, posisi harus di area. Disarankan.', 'ri-map-pin-2-line'], 'qr' => ['QR layar + GPS', 'Ditambah QR di TV yang berganti tiap 30 detik. Paling ketat.', 'ri-qr-code-line'], 'open' => ['Tanpa cek lokasi', 'Untuk kegiatan di luar area (mis. online).', 'ri-smartphone-line']] as $k => [$label, $hint, $icon])
                         <label class="flex cursor-pointer gap-3 rounded-2xl border p-3.5 transition" :class="mode === '{{ $k }}' ? 'border-neon/60 bg-neon/[0.07]' : 'border-white/10'">
                             <input type="radio" name="checkin_mode" value="{{ $k }}" x-model="mode" class="sr-only">
                             <i class="{{ $icon }} text-2xl" :class="mode === '{{ $k }}' ? 'text-neon' : 'text-mist'"></i>
                             <span class="leading-tight"><span class="block text-sm font-semibold">{{ $label }}</span><span class="text-xs text-mist">{{ $hint }}</span></span>
                         </label>
                     @endforeach
+                </div>
+                </div>
+                <div x-show="mode !== 'open'" x-cloak>
+                    <p class="label">Area GPS yang sah</p>
+                    @if ($areas->isEmpty())
+                        <p class="text-sm text-mist">Belum ada area. @can('manage-content')<a href="{{ route('admin.attendance.locations') }}" class="text-neon">Petakan area</a>@endcan</p>
+                    @else
+                        <div class="flex flex-wrap gap-2">
+                            @foreach ($areas as $a)
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="location_ids[]" value="{{ $a->id }}" @checked(in_array($a->id, $areaIds, true)) class="peer sr-only">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-sm text-fog transition peer-checked:border-neon/60 peer-checked:bg-neon/10 peer-checked:text-neon">
+                                        <i class="ri-map-pin-2-line"></i>{{ $a->name }} @unless ($a->isMapped()) <span class="text-[11px] text-hivis">belum dipetakan</span> @endunless
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <p class="mt-1.5 text-xs text-mist">Tidak dicentang = boleh dari semua area.</p>
+                    @endif
                 </div>
                 <div class="grid gap-5 sm:grid-cols-3">
                     <div>
@@ -102,7 +123,7 @@
                     </div>
                     <div>
                         <label class="label" for="late_after">Terlambat setelah (menit)</label>
-                        <input id="late_after" name="late_after" type="number" min="0" max="240" x-model.number="late" required class="field">
+                        <input id="late_after" name="late_after" type="number" min="0" max="240" x-model="late" class="field" placeholder="Kosong = tidak dihitung">
                     </div>
                     <div>
                         <label class="label" for="open_after">Ditutup (menit setelah)</label>
@@ -116,7 +137,7 @@
             </section>
 
             <div class="flex gap-3">
-                <button class="btn-neon"><i class="ri-qr-code-line text-lg"></i> {{ $session->exists ? 'Simpan sesi' : 'Buat sesi & tampilkan QR' }}</button>
+                <button class="btn-neon"><i class="ri-qr-code-line text-lg"></i> {{ $session->exists ? 'Simpan sesi' : 'Buat sesi' }}</button>
                 <a href="{{ $session->exists ? route('admin.attendance.show', $session) : route('admin.attendance.index') }}" class="btn-ghost">Batal</a>
             </div>
         </div>
@@ -128,7 +149,7 @@
                 <ol class="relative space-y-5 border-l border-white/10 pl-5">
                     <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-neon"></span><p class="font-display text-lg font-semibold" x-text="fmt(-before)"></p><p class="text-xs text-mist">Absen dibuka</p></li>
                     <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-ink"></span><p class="font-display text-lg font-semibold" x-text="fmt(0)"></p><p class="text-xs text-mist">Kegiatan mulai</p></li>
-                    <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-hivis"></span><p class="font-display text-lg font-semibold" x-text="fmt(late)"></p><p class="text-xs text-mist">Setelah ini dihitung terlambat</p></li>
+                    <li x-show="late !== '' && late !== null"><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-hivis"></span><p class="font-display text-lg font-semibold" x-text="fmt(Number(late))"></p><p class="text-xs text-mist">Setelah ini dihitung terlambat</p></li>
                     <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-alarm"></span><p class="font-display text-lg font-semibold" x-text="fmt(after)"></p><p class="text-xs text-mist">Absen ditutup otomatis</p></li>
                 </ol>
             </div>

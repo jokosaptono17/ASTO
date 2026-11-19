@@ -13,7 +13,7 @@ class AttendanceExport
     public static function write(Collection $records, string $sheet): string
     {
         $rows = [['HARI', 'TANGGAL', 'SHIFT', 'WAKTU MULAI', 'PERUSAHAAN', 'DEPARTEMEN PELAKSANA', 'KEGIATAN', 'JUDUL / TOPIK', 'LOKASI',
-            'NAMA', 'NRP', 'JABATAN', 'SECTION', 'PERAN', 'JAM ABSEN', 'TERLAMBAT', 'MULAI TIDUR', 'BANGUN', 'DURASI TIDUR', 'STATUS FATIGUE', 'CARA ABSEN']];
+            'NAMA', 'NRP', 'JABATAN', 'SECTION', 'PERAN', 'JAM ABSEN', 'TERLAMBAT', 'MULAI TIDUR', 'BANGUN', 'DURASI TIDUR', 'STATUS FATIGUE', 'CARA ABSEN', 'AREA GPS', 'STATUS LOKASI', 'AKURASI GPS (M)', 'KOORDINAT']];
         foreach ($records as $r) {
             $s = $r->session;
             $rows[] = [
@@ -25,7 +25,7 @@ class AttendanceExport
                 $s->department,
                 $s->type->name,
                 $s->title,
-                $s->location,
+                $s->locationLabel(),
                 $r->name,
                 $r->nrp,
                 ($r->role === 'pemateri' ? '⭐ ' : '').$r->position,
@@ -38,11 +38,15 @@ class AttendanceExport
                 $r->sleepLabel() ?? '',
                 $r->fatigue ? strtoupper(AttendanceRecord::FATIGUE[$r->fatigue]['label']) : '',
                 AttendanceRecord::METHODS[$r->method] ?? $r->method,
+                $r->location?->name ?? '',
+                ['inside' => 'DI AREA', 'unverified' => 'BELUM TERVERIFIKASI'][$r->geo_status] ?? '',
+                $r->accuracy ?? '',
+                $r->latitude !== null ? $r->latitude.', '.$r->longitude : '',
             ];
         }
         $path = storage_path('app/private/absensi-'.uniqid().'.xlsx');
         @mkdir(dirname($path), 0775, true);
-        Spreadsheet::writeXlsx($path, $rows, $sheet, [12, 12, 9, 11, 16, 20, 14, 30, 14, 30, 12, 22, 20, 11, 10, 10, 11, 9, 14, 16, 13]);
+        Spreadsheet::writeXlsx($path, $rows, $sheet, [12, 12, 9, 11, 16, 20, 14, 30, 14, 30, 12, 22, 20, 11, 10, 10, 11, 9, 14, 16, 13, 14, 20, 12, 24]);
 
         return $path;
     }

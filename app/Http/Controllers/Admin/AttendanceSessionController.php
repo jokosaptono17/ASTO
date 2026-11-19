@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\AttendanceLocation;
 use App\Models\AttendanceRecord;
+use App\Models\AttendanceSchedule;
 use App\Models\AttendanceSession;
 use App\Models\AttendanceType;
 use App\Models\User;
@@ -26,6 +28,7 @@ class AttendanceSessionController extends Controller
 {
     public function index(Request $request): View
     {
+        AttendanceSchedule::ensureSessions();
         $user = $request->user();
         $base = AttendanceSession::visibleTo($user)->with('type', 'host')->withCount('records');
 
@@ -58,7 +61,8 @@ class AttendanceSessionController extends Controller
             'company' => $last?->company ?? 'PT KPP MINING',
             'department' => $last?->department ?? 'PLANT',
             'target_departments' => $last?->target_departments ?? ($request->user()->department ? [$request->user()->department] : []),
-            'checkin_mode' => 'qr',
+            'checkin_mode' => 'gps',
+            'location_ids' => $last?->location_ids,
             'shift' => $start->hour >= 6 && $start->hour < 18 ? '1' : '2',
         ]);
 
@@ -75,9 +79,13 @@ class AttendanceSessionController extends Controller
         return redirect()->route('admin.attendance.show', $session)->with('toast', 'Sesi dibuat. Tampilkan QR ini di lokasi.');
     }
 
-    public function edit(Request $request, AttendanceSession $session): View
+    public function edit(Request $request, AttendanceSession $session): View|RedirectResponse
     {
         $this->authorizeSession($request, $session);
+        if ($session->isRoutine()) {
+            return redirect()->route($request->user()->canManageContent() ? 'admin.attendance.schedules' : 'admin.attendance.show', $request->user()->canManageContent() ? [] : $session)
+                ->with('toast', 'Sesi rutin dibuat otomatis dari jadwal. Ubah jadwalnya di sini.');
+        }
 
         return view('admin.attendance.form', $this->formData($session) + [
             'open' => [(int) $session->opens_at->diffInMinutes($session->starts_at), (int) $session->starts_at->diffInMinutes($session->closes_at)],
@@ -87,6 +95,7 @@ class AttendanceSessionController extends Controller
     public function update(Request $request, AttendanceSession $session): RedirectResponse
     {
         $this->authorizeSession($request, $session);
+        abort_if($session->isRoutine(), 403, 'Sesi rutin diatur dari jadwal.');
         $this->save($request, $session);
 
         return redirect()->route('admin.attendance.show', $session)->with('toast', 'Sesi disimpan.');
@@ -131,12 +140,23 @@ class AttendanceSessionController extends Controller
     public function destroy(Request $request, AttendanceSession $session): RedirectResponse
     {
         $this->authorizeSession($request, $session);
+        abort_if($session->isRoutine(), 403, 'Sesi rutin tidak bisa dihapus. Nonaktifkan jadwalnya bila tidak dipakai.');
         abort_unless($request->user()->canManageContent() || $session->records()->doesntExist(), 403, 'Sesi yang sudah punya kehadiran hanya bisa dihapus Admin.');
         $label = $session->type->name.' '.$session->starts_at->format('d/m H:i');
         $session->delete();
         ActivityLog::record('absensi', "Menghapus sesi {$label}");
 
         return redirect()->route('admin.attendance.index')->with('toast', 'Sesi dihapus.');
+    }
+
+    /** Poster QR untuk ditempel di lokasi: satu QR untuk semua absensi. */
+    public function poster(Request $request): View
+    {
+        return view('admin.attendance.poster', [
+            'url' => route('attendance.scan'),
+            'locations' => AttendanceLocation::options(),
+            'place' => $request->query('lokasi'),
+        ]);
     }
 
     /** Host mencatat kehadiran (karyawan tanpa HP, lupa scan, dll). */
@@ -189,7 +209,7 @@ class AttendanceSessionController extends Controller
     public function export(Request $request, AttendanceSession $session): BinaryFileResponse
     {
         $this->authorizeSession($request, $session);
-        $path = AttendanceExport::write($session->records()->with('session.type')->orderBy('checked_in_at')->get(), 'Absensi');
+        $path = AttendanceExport::write($session->records()->with('session.type', 'location')->orderBy('checked_in_at')->get(), 'Absensi');
 
         return response()->download($path, 'absensi-'.Str::slug($session->type->name).'-'.$session->starts_at->format('Ymd-Hi').'.xlsx')->deleteFileAfterSend();
     }
@@ -199,7 +219,7 @@ class AttendanceSessionController extends Controller
     private function feedData(AttendanceSession $session): array
     {
         $session->refresh();
-        $records = $session->records()->orderByDesc('checked_in_at')->get();
+        $records = $session->records()->with('location')->orderByDesc('checked_in_at')->get();
         $expected = $session->expectedUsers();
         $presentNrps = $records->pluck('nrp')->all();
         $missing = $expected->reject(fn ($u) => in_array($u->nrp, $presentNrps, true));
@@ -207,6 +227,7 @@ class AttendanceSessionController extends Controller
         return [
             'status' => $session->status(),
             'statusLabel' => $session->statusLabel(),
+            'mode' => $session->checkin_mode,
             'url' => $session->isOpen() ? $session->checkinUrl() : null,
             'token' => $session->isOpen() && $session->checkin_mode === 'qr' ? $session->token() : null,
             'next' => $session->secondsToNextToken(),
@@ -218,7 +239,10 @@ class AttendanceSessionController extends Controller
                 'risk' => $records->where('fatigue', 'risk')->count(),
                 'coaching' => $records->where('fatigue', 'coaching')->count(),
                 'speaker' => $records->where('role', 'pemateri')->count(),
+                'unverified' => $records->where('geo_status', 'unverified')->count(),
             ],
+            'places' => $records->where('geo_status', 'inside')->groupBy(fn ($r) => $r->location?->name ?? '–')
+                ->map(fn ($g, $name) => ['name' => $name, 'count' => $g->count()])->sortByDesc('count')->values()->all(),
             'records' => $records->map->toLive()->values()->all(),
             'missing' => $missing->map(fn ($u) => ['nrp' => $u->nrp, 'name' => $u->displayName(), 'department' => $u->department])->values()->all(),
         ];
@@ -234,13 +258,15 @@ class AttendanceSessionController extends Controller
             'shift' => ['nullable', Rule::in(['1', '2'])],
             'open_before' => ['required', 'integer', 'min:0', 'max:240'],
             'open_after' => ['required', 'integer', 'min:5', 'max:720'],
-            'late_after' => ['required', 'integer', 'min:0', 'max:240'],
+            'late_after' => ['nullable', 'integer', 'min:0', 'max:240'],
             'location' => ['nullable', 'string', 'max:100'],
+            'location_ids' => ['nullable', 'array'],
+            'location_ids.*' => ['integer', Rule::exists('attendance_locations', 'id')],
             'company' => ['nullable', 'string', 'max:100'],
             'department' => ['nullable', 'string', 'max:100'],
             'target_departments' => ['nullable', 'array'],
             'target_departments.*' => ['string', 'max:100'],
-            'checkin_mode' => ['required', Rule::in(['qr', 'open'])],
+            'checkin_mode' => ['required', Rule::in(['gps', 'qr', 'open'])],
             'speaker_nrp' => ['nullable', 'string', 'max:30'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [], [
@@ -258,8 +284,9 @@ class AttendanceSessionController extends Controller
             'starts_at' => $start,
             'opens_at' => $start->copy()->subMinutes((int) $data['open_before']),
             'closes_at' => $start->copy()->addMinutes((int) $data['open_after']),
-            'late_after' => $data['late_after'],
+            'late_after' => $data['late_after'] ?? null,
             'location' => $data['location'] ?? null,
+            'location_ids' => array_values(array_map('intval', $data['location_ids'] ?? [])) ?: null,
             'company' => $data['company'] ?? null,
             'department' => $data['department'] ?? null,
             'target_departments' => array_values(array_filter($data['target_departments'] ?? [])) ?: null,
@@ -283,6 +310,7 @@ class AttendanceSessionController extends Controller
             'types' => AttendanceType::where('is_active', true)->orderBy('sort_order')->get(),
             'departments' => User::where('is_active', true)->whereNotNull('department')->distinct()->orderBy('department')->pluck('department'),
             'locations' => AttendanceSession::whereNotNull('location')->distinct()->orderBy('location')->limit(20)->pluck('location'),
+            'areas' => AttendanceLocation::options(),
         ];
     }
 

@@ -8,7 +8,7 @@
     <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style="background: color-mix(in oklab, {{ $s->type->color }} 16%, transparent); color: {{ $s->type->color }}"><i class="{{ $s->type->icon }} text-xl"></i></span>
     <div class="min-w-0 grow">
         <p class="truncate font-semibold">{{ $s->type->name }}{{ $s->title ? ' — '.$s->title : '' }}</p>
-        <p class="truncate text-xs text-mist">{{ $s->location ?: 'Lokasi belum diisi' }}{{ $s->shift ? ' · Shift '.$s->shift : '' }} · Host {{ $s->host?->displayName() ?? '–' }}{{ $s->target_departments ? ' · '.implode(', ', $s->target_departments) : '' }}</p>
+        <p class="truncate text-xs text-mist">{{ $s->locationLabel() ?: 'Lokasi belum diisi' }}{{ $s->shift ? ' · Shift '.$s->shift : '' }} · {{ $s->isRoutine() ? 'Rutin' : 'Host '.($s->host?->displayName() ?? '–') }}{{ $s->target_departments ? ' · '.implode(', ', $s->target_departments) : '' }}</p>
     </div>
     <div class="shrink-0 text-right">
         <p class="font-display text-lg font-bold">{{ $s->records_count }}</p>

@@ -10,7 +10,7 @@ document.addEventListener('alpine:init', () => {
     const Alpine = window.Alpine;
 
     /* ---------- Pemindai QR karyawan ---------- */
-    Alpine.data('qrScanner', () => ({
+    Alpine.data('qrScanner', (auto = true) => ({
         state: 'idle', // idle | starting | scanning | error
         message: 'Arahkan kamera ke QR yang tampil di layar P5M / safety talk.',
         stream: null,
@@ -24,7 +24,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
             // Langsung coba buka kamera; bila izin belum diberikan, tombol tetap tersedia
-            this.start();
+            if (auto) this.start();
             window.addEventListener('pagehide', () => this.stop());
         },
         async start() {
@@ -158,6 +158,7 @@ document.addEventListener('alpine:init', () => {
                 terlambat: all.filter((r) => r.late),
                 fatigue: all.filter((r) => r.fatigue && r.fatigue !== 'fit'),
                 pemateri: all.filter((r) => r.role === 'pemateri'),
+                lokasi: all.filter((r) => r.geo === 'unverified'),
             }[this.filter] ?? all;
         },
         get ring() { return `${(this.remaining / 30) * 100}`; },

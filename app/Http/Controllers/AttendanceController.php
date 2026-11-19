@@ -2,32 +2,74 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceLocation;
 use App\Models\AttendanceRecord;
+use App\Models\AttendanceSchedule;
 use App\Models\AttendanceSession;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Absensi dari sisi karyawan: scan QR / ketik kode layar → isi peran & jam
- * tidur → tercatat. Identitas diambil dari akun, jadi tidak bisa diisi atas
- * nama orang lain.
+ * Absensi dari sisi karyawan: scan QR tempel (satu QR untuk semua absensi) →
+ * cek posisi GPS → pilih kegiatan → isi peran & jam tidur → tercatat.
+ *
+ * Pengaman titip absen: identitas dari akun, posisi harus di area yang sah,
+ * satu HP hanya untuk satu NRP per sesi, dan (mode qr) token layar berganti.
  */
 class AttendanceController extends Controller
 {
     /** Bukti scan berlaku selama ini untuk menyelesaikan form (detik). */
     private const PROOF_TTL = 900;
 
+    public const DEVICE_COOKIE = 'astoone_device';
+
     public function scan(Request $request): View
     {
+        $this->deviceId($request);
+
         $user = $request->user();
+        $sessions = self::openFor($user);
 
         return view('portal.attendance.scan', [
-            'sessions' => self::openFor($user),
+            'sessions' => $sessions,
+            'next' => AttendanceSession::with('type')->whereNull('closed_at')->where('opens_at', '>', now())
+                ->where('opens_at', '<', now()->addDay())->orderBy('opens_at')->get()->first(fn ($s) => $s->targets($user)),
+            'mapped' => AttendanceLocation::mapped()->exists(),
         ]);
+    }
+
+    /** Posisi karyawan terhadap area absensi + kegiatan yang bisa dipilih di posisi itu. */
+    public function locate(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'acc' => ['nullable', 'numeric', 'min:0'],
+            'code' => ['nullable', 'string', 'max:12'],
+        ]);
+        [$lat, $lng, $acc] = [isset($data['lat']) ? (float) $data['lat'] : null, isset($data['lng']) ? (float) $data['lng'] : null, isset($data['acc']) ? (float) $data['acc'] : null];
+
+        if (! empty($data['code'])) {
+            $session = AttendanceSession::where('code', $data['code'])->firstOrFail();
+            $geo = $session->requiresGps() ? AttendanceLocation::locate($lat, $lng, $acc, $session->location_ids) : self::noGeo();
+
+            return response()->json(self::geoPayload($geo));
+        }
+
+        $sessions = self::openFor($request->user())->map(function (AttendanceSession $s) use ($lat, $lng, $acc) {
+            $geo = $s->requiresGps() ? AttendanceLocation::locate($lat, $lng, $acc, $s->location_ids) : self::noGeo();
+
+            return ['code' => $s->code] + self::geoPayload($geo);
+        });
+
+        return response()->json(self::geoPayload(AttendanceLocation::locate($lat, $lng, $acc)) + ['sessions' => $sessions->values()]);
     }
 
     /** Ketik 6 angka yang tampil di layar sesi. */
@@ -74,12 +116,14 @@ class AttendanceController extends Controller
         }
 
         $last = AttendanceRecord::where('nrp', $user->nrp)->whereNotNull('sleep_at')->latest('checked_in_at')->first();
+        $this->deviceId($request);
 
         return view('portal.attendance.checkin', [
             'session' => $session,
             'state' => 'form',
             'user' => $user,
             'targeted' => $session->targets($user),
+            'checkGps' => $session->requiresGps() && $session->allowedLocations()->isNotEmpty(),
             'lastSleep' => $last ? [substr($last->sleep_at, 0, 5), substr($last->wake_at, 0, 5)] : null,
         ]);
     }
@@ -95,7 +139,7 @@ class AttendanceController extends Controller
         if (! $session->isOpen()) {
             return redirect()->route('attendance.checkin', $code)->with('toast', 'Sesi sudah ditutup.');
         }
-        $method = 'open';
+        $method = $session->checkin_mode === 'gps' ? 'gps' : 'open';
         if ($session->checkin_mode === 'qr') {
             if (! $this->hasProof($request, $session)) {
                 return redirect()->route('attendance.checkin', $code)->withErrors(['token' => 'Scan ulang QR di layar sesi.']);
@@ -113,8 +157,34 @@ class AttendanceController extends Controller
             'sleep_at.required' => 'Isi jam mulai tidur.',
             'wake_at.required' => 'Isi jam bangun.',
         ]);
+        $pos = $request->validate([
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'acc' => ['nullable', 'numeric', 'min:0'],
+        ]);
 
-        $record = self::record($session, $user, $data + ['method' => $method]);
+        // Posisi GPS: di luar area → ditolak; tidak pasti → boleh, ditandai untuk diperiksa host
+        $geo = self::noGeo();
+        if ($session->requiresGps()) {
+            $geo = AttendanceLocation::locate(
+                isset($pos['lat']) ? (float) $pos['lat'] : null,
+                isset($pos['lng']) ? (float) $pos['lng'] : null,
+                isset($pos['acc']) ? (float) $pos['acc'] : null,
+                $session->location_ids,
+            );
+            if ($geo['status'] === 'outside') {
+                return back()->withInput()->withErrors(['geo' => self::geoPayload($geo)['message'].' Absen hanya bisa dari area kegiatan.']);
+            }
+        }
+
+        // Satu HP hanya untuk satu NRP di sesi yang sama
+        $device = $this->deviceId($request);
+        $other = $session->records()->where('device_id', $device)->where('nrp', '!=', $user->nrp)->first();
+        if ($other) {
+            return back()->withInput()->withErrors(['device' => 'HP ini sudah dipakai absen oleh '.Str::title(Str::lower($other->name)).' di sesi ini. Setiap karyawan absen dari HP masing-masing.']);
+        }
+
+        $record = self::record($session, $user, $data + ['method' => $method, 'device_id' => $device] + self::geoRecord($geo, $pos));
         $request->session()->forget("attendance.proof.{$session->id}");
 
         return redirect()->route('attendance.checkin', $code)->with('justCheckedIn', $record->id);
@@ -142,6 +212,7 @@ class AttendanceController extends Controller
     /** Sesi yang sedang dibuka & relevan untuk karyawan ini, plus status sudah/belum absen. */
     public static function openFor(User $user)
     {
+        AttendanceSchedule::ensureSessions();
         $done = AttendanceRecord::where('nrp', $user->nrp)->where('checked_in_at', '>=', now()->subDay())->pluck('attendance_session_id')->all();
 
         return AttendanceSession::openNow()->with('type')->orderBy('starts_at')->get()
@@ -174,8 +245,66 @@ class AttendanceController extends Controller
                 'method' => $data['method'] ?? 'manual',
                 'recorded_by' => $recorder?->id,
                 'note' => $data['note'] ?? null,
+                'geo_status' => $data['geo_status'] ?? 'none',
+                'attendance_location_id' => $data['attendance_location_id'] ?? null,
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
+                'accuracy' => $data['accuracy'] ?? null,
+                'distance_m' => $data['distance_m'] ?? null,
+                'device_id' => $data['device_id'] ?? null,
             ],
         ));
+    }
+
+    /** @return array{status: string, location: null, distance: null, accuracy: null} */
+    private static function noGeo(): array
+    {
+        return ['status' => 'none', 'location' => null, 'distance' => null, 'accuracy' => null];
+    }
+
+    /** Ringkasan posisi untuk tampilan (JSON & pesan galat). */
+    public static function geoPayload(array $geo): array
+    {
+        $name = $geo['location']?->name;
+        $message = match ($geo['status']) {
+            'inside' => 'Anda berada di area '.$name.'.',
+            'outside' => 'Anda berada '.self::meters($geo['distance']).' di luar area '.$name.'.',
+            'unverified' => $geo['distance'] === null
+                ? 'GPS belum aktif. Anda tetap bisa absen, tetapi lokasi ditandai untuk diperiksa GL.'
+                : 'Posisi belum pasti (akurasi ±'.$geo['accuracy'].' m). Anda tetap bisa absen, tetapi lokasi ditandai untuk diperiksa GL.',
+            default => '',
+        };
+
+        return ['status' => $geo['status'], 'location' => $name, 'distance' => $geo['distance'], 'accuracy' => $geo['accuracy'], 'message' => $message];
+    }
+
+    private static function meters(?int $m): string
+    {
+        return $m === null ? '' : ($m >= 1000 ? number_format($m / 1000, 1, ',', '.').' km' : $m.' m');
+    }
+
+    private static function geoRecord(array $geo, array $pos): array
+    {
+        return [
+            'geo_status' => $geo['status'],
+            'attendance_location_id' => $geo['location']?->id,
+            'latitude' => isset($pos['lat']) ? round((float) $pos['lat'], 7) : null,
+            'longitude' => isset($pos['lng']) ? round((float) $pos['lng'], 7) : null,
+            'accuracy' => $geo['accuracy'] !== null ? min(65000, $geo['accuracy']) : null,
+            'distance_m' => $geo['distance'],
+        ];
+    }
+
+    /** ID acak per HP/browser (cookie 5 tahun) untuk mencegah satu HP absen untuk banyak NRP. */
+    private function deviceId(Request $request): string
+    {
+        $id = (string) $request->cookie(self::DEVICE_COOKIE);
+        if (! preg_match('/^[a-f0-9-]{36}$/', $id)) {
+            $id = (string) Str::uuid();
+        }
+        Cookie::queue(Cookie::make(self::DEVICE_COOKIE, $id, 60 * 24 * 365 * 5, null, null, null, true, false, 'lax'));
+
+        return $id;
     }
 
     private function grantProof(Request $request, AttendanceSession $session, string $method): void

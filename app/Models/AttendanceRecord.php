@@ -13,7 +13,14 @@ class AttendanceRecord extends Model
         'risk' => ['label' => 'Fatigue Risk', 'tone' => 'alarm', 'icon' => 'ri-alarm-warning-fill'],
     ];
 
+    public const GEO = [
+        'inside' => ['label' => 'Di area', 'tone' => 'neon', 'icon' => 'ri-map-pin-2-fill'],
+        'unverified' => ['label' => 'Lokasi tidak terverifikasi', 'tone' => 'hivis', 'icon' => 'ri-map-pin-line'],
+        'none' => ['label' => 'Tanpa cek lokasi', 'tone' => 'mist', 'icon' => 'ri-map-pin-line'],
+    ];
+
     public const METHODS = [
+        'gps' => 'Aplikasi + GPS',
         'qr' => 'Scan QR',
         'kode' => 'Kode layar',
         'open' => 'Aplikasi',
@@ -23,11 +30,12 @@ class AttendanceRecord extends Model
     protected $fillable = [
         'attendance_session_id', 'user_id', 'nrp', 'name', 'position', 'department', 'company', 'role',
         'sleep_at', 'wake_at', 'sleep_minutes', 'fatigue', 'checked_in_at', 'is_late', 'method', 'recorded_by', 'note',
+        'geo_status', 'attendance_location_id', 'latitude', 'longitude', 'accuracy', 'distance_m', 'device_id',
     ];
 
     protected function casts(): array
     {
-        return ['checked_in_at' => 'datetime', 'is_late' => 'boolean'];
+        return ['checked_in_at' => 'datetime', 'is_late' => 'boolean', 'latitude' => 'float', 'longitude' => 'float'];
     }
 
     /**
@@ -73,6 +81,23 @@ class AttendanceRecord extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(AttendanceLocation::class, 'attendance_location_id');
+    }
+
+    /** Keterangan lokasi singkat, mis. "WS 25" atau "±80 m dari Quarry". */
+    public function geoLabel(): string
+    {
+        return match ($this->geo_status) {
+            'inside' => $this->location?->name ?? 'Di area',
+            'unverified' => $this->distance_m !== null && $this->location
+                ? 'Belum pasti · '.$this->distance_m.' m dari '.$this->location->name
+                : ($this->latitude !== null ? 'Belum pasti · GPS ±'.$this->accuracy.' m' : 'Belum pasti · GPS tidak aktif'),
+            default => $this->method === 'manual' ? 'Dicatat host' : '–',
+        };
+    }
+
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
@@ -93,6 +118,9 @@ class AttendanceRecord extends Model
             'sleep' => $this->sleepLabel(),
             'late' => $this->is_late,
             'method' => self::METHODS[$this->method] ?? $this->method,
+            'geo' => $this->geo_status,
+            'place' => $this->geoLabel(),
+            'accuracy' => $this->accuracy,
             'time' => $this->checked_in_at->format('H:i'),
             'ts' => $this->checked_in_at->timestamp,
         ];

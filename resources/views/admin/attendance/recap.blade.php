@@ -17,6 +17,7 @@
         <div><label class="label text-xs" for="q">Nama / NRP</label><input id="q" name="q" value="{{ request('q') }}" class="field !py-2"></div>
         <div class="flex items-end gap-2">
             <label class="flex h-[42px] items-center gap-2 text-sm text-fog"><input type="checkbox" name="late" value="1" @checked(request('late') === '1') class="h-4 w-4 accent-[var(--color-neon)]"> Terlambat</label>
+            <label class="flex h-[42px] items-center gap-2 text-sm text-fog"><input type="checkbox" name="geo" value="unverified" @checked(request('geo') === 'unverified') class="h-4 w-4 accent-[var(--color-neon)]"> Lokasi belum pasti</label>
             <button class="btn-neon !min-h-[42px] grow !px-3 text-sm"><i class="ri-filter-3-line"></i></button>
         </div>
     </form>
@@ -93,7 +94,7 @@
                         <td class="a-td whitespace-nowrap"><span class="font-display">{{ $r->checked_in_at->format('d/m H:i') }}</span>@if ($r->is_late) <span class="chip-penting ml-1 !py-0">Telat</span>@endif</td>
                         <td class="a-td"><a href="{{ route('admin.attendance.show', $r->session) }}" class="hover:text-neon"><span style="color: {{ $r->session->type->color }}">●</span> {{ $r->session->type->name }}</a><div class="max-w-[220px] truncate text-xs text-mist">{{ $r->session->title }}</div></td>
                         <td class="a-td">{{ \Illuminate\Support\Str::title(\Illuminate\Support\Str::lower($r->name)) }}{{ $r->role === 'pemateri' ? ' ⭐' : '' }}<div class="font-display text-xs text-mist">{{ $r->nrp }}</div></td>
-                        <td class="a-td text-fog">{{ $r->department ?: '–' }}</td>
+                        <td class="a-td text-fog">{{ $r->department ?: '–' }}<div class="text-xs {{ $r->geo_status === 'unverified' ? 'text-hivis' : 'text-mist' }}">{{ $r->geo_status === 'none' ? '' : $r->geoLabel() }}</div></td>
                         <td class="a-td text-fog">{{ $r->sleepLabel() ?? '–' }}</td>
                         <td class="a-td">@if ($f)<span class="chip {{ ['neon' => 'bg-neon/15 text-neon', 'hivis' => 'bg-hivis/15 text-hivis', 'alarm' => 'bg-alarm/15 text-red-300'][$f['tone']] }}">{{ $f['label'] }}</span>@else<span class="text-mist">–</span>@endif</td>
                     </tr>

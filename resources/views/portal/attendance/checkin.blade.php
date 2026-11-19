@@ -20,7 +20,9 @@
                 <p class="relative mt-1 text-fog">{{ $record->checked_in_at->locale('id')->translatedFormat('l, j F Y · H:i') }}</p>
                 <div class="relative mt-4 flex flex-wrap justify-center gap-2">
                     <span class="chip bg-white/[0.06] text-fog">{{ $record->role === 'pemateri' ? '⭐ Pemateri' : 'Audience' }}</span>
-                    @if ($record->is_late) <span class="chip-penting"><i class="ri-time-line"></i> Terlambat</span> @else <span class="chip-tayang"><i class="ri-time-line"></i> Tepat waktu</span> @endif
+                    @if ($record->is_late) <span class="chip-penting"><i class="ri-time-line"></i> Terlambat</span> @elseif ($session->late_after !== null) <span class="chip-tayang"><i class="ri-time-line"></i> Tepat waktu</span> @endif
+                    @if ($record->geo_status === 'inside') <span class="chip-tayang"><i class="ri-map-pin-2-fill"></i> {{ $record->location?->name }}</span>
+                    @elseif ($record->geo_status === 'unverified') <span class="chip bg-hivis/15 text-hivis"><i class="ri-map-pin-line"></i> Lokasi diperiksa GL</span> @endif
                 </div>
             </section>
 
@@ -78,6 +80,26 @@
             <form method="POST" action="{{ route('attendance.store', $session->code) }}" class="space-y-5"
                   x-data="sleepForm(@js(old('sleep_at', $lastSleep[0] ?? '')), @js(old('wake_at', $lastSleep[1] ?? '')))">
                 @csrf
+                {{-- Cek lokasi GPS --}}
+                <div x-data="geoCheck(@js(route('attendance.locate')), @js($session->code), @js($checkGps))" x-effect="$dispatch('geo-state', { blocked })">
+                    <input type="hidden" name="lat" :value="lat"><input type="hidden" name="lng" :value="lng"><input type="hidden" name="acc" :value="acc">
+                    @if ($checkGps)
+                        <section class="flex items-start gap-3 rounded-2xl border p-3.5 transition-colors" aria-live="polite"
+                                 :class="{ locating: 'border-white/10 bg-bench', inside: 'border-neon/40 bg-neon/[0.07]', outside: 'border-alarm/50 bg-alarm/10', unverified: 'border-hivis/40 bg-hivis/[0.08]', none: 'border-white/10 bg-bench' }[status]">
+                            <span class="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+                                  :class="{ locating: 'bg-white/[0.06] text-neon', inside: 'bg-neon/15 text-neon', outside: 'bg-alarm/15 text-alarm', unverified: 'bg-hivis/15 text-hivis', none: 'bg-white/[0.06] text-mist' }[status]">
+                                <i class="text-2xl" :class="{ locating: 'ri-focus-3-line animate-pulse', inside: 'ri-map-pin-2-fill', outside: 'ri-map-pin-range-line', unverified: 'ri-map-pin-line', none: 'ri-map-pin-line' }[status]"></i>
+                            </span>
+                            <div class="min-w-0 grow leading-snug">
+                                <p class="font-semibold" x-text="{ locating: 'Mengecek lokasi…', inside: 'Lokasi terverifikasi · ' + location, outside: 'Di luar area absensi', unverified: 'Lokasi belum terverifikasi', none: 'Lokasi' }[status]">Mengecek lokasi…</p>
+                                <p class="mt-0.5 text-sm text-fog" x-text="message"></p>
+                                <button type="button" x-show="status !== 'locating' && status !== 'inside'" x-cloak @click="check()" class="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-neon"><i class="ri-refresh-line"></i> Cek ulang</button>
+                            </div>
+                        </section>
+                    @endif
+                </div>
+                @error('geo') <p class="error !mt-0 rounded-xl bg-alarm/10 px-3 py-2"><i class="ri-map-pin-range-line mt-0.5"></i>{{ $message }}</p> @enderror
+                @error('device') <p class="error !mt-0 rounded-xl bg-alarm/10 px-3 py-2"><i class="ri-smartphone-line mt-0.5"></i>{{ $message }}</p> @enderror
                 {{-- Identitas dari akun --}}
                 <section class="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-bench p-3.5">
                     <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-neon font-display font-bold text-[#04170d]">{{ $user->initials() }}</span>
@@ -140,8 +162,10 @@
                     </section>
                 @endif
 
-                <button class="btn-neon w-full !min-h-14 text-base"><i class="ri-fingerprint-line text-xl"></i> Absen sekarang</button>
-                <p class="text-center text-xs text-mist">Tercatat atas nama Anda pada jam server. {{ $session->late_after }} menit setelah pukul {{ $session->starts_at->format('H:i') }} dihitung terlambat.</p>
+                <div x-data="{ geoBlocked: @js($checkGps) }" @geo-state.window="geoBlocked = $event.detail.blocked">
+                    <button class="btn-neon w-full !min-h-14 text-base disabled:opacity-40" :disabled="geoBlocked"><i class="ri-fingerprint-line text-xl"></i> Absen sekarang</button>
+                    <p class="mt-2 text-center text-xs text-mist">Tercatat atas nama Anda pada jam server{{ $session->late_after !== null ? '. '.$session->late_after.' menit setelah pukul '.$session->starts_at->format('H:i').' dihitung terlambat' : '' }}. Satu HP untuk satu karyawan.</p>
+                </div>
             </form>
         @endif
     </div>

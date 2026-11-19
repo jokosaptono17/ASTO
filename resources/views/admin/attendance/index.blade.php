@@ -1,6 +1,7 @@
 <x-layouts.admin title="Absensi">
     <x-slot:actions>
-        <a href="{{ route('admin.attendance.create') }}" class="btn-neon !min-h-11 text-sm"><i class="ri-add-line text-lg"></i> Sesi baru</a>
+        <a href="{{ route('admin.attendance.poster') }}" target="_blank" class="btn-ghost !min-h-11 text-sm"><i class="ri-printer-line text-lg"></i> Cetak QR absensi</a>
+        <a href="{{ route('admin.attendance.create') }}" class="btn-neon !min-h-11 text-sm"><i class="ri-add-line text-lg"></i> Event baru</a>
     </x-slot:actions>
     @include('admin.attendance._tabs')
 
@@ -23,7 +24,7 @@
                             <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style="background: color-mix(in oklab, {{ $s->type->color }} 16%, transparent); color: {{ $s->type->color }}"><i class="{{ $s->type->icon }} text-2xl"></i></span>
                             <div class="min-w-0 grow">
                                 <p class="truncate font-semibold">{{ $s->type->name }}{{ $s->title ? ' — '.$s->title : '' }}</p>
-                                <p class="text-xs text-mist">{{ $s->starts_at->format('H:i') }} · {{ $s->location ?: '–' }} · tutup {{ $s->closes_at->format('H:i') }}</p>
+                                <p class="text-xs text-mist">{{ $s->opens_at->format('H:i') }}–{{ $s->closes_at->format('H:i') }} · {{ $s->locationLabel() ?: '–' }}{{ $s->isRoutine() ? ' · Rutin' : '' }}</p>
                             </div>
                             <p class="text-right"><span class="block font-display text-2xl leading-none font-bold text-neon">{{ $s->records_count }}</span><span class="text-[11px] text-mist">hadir</span></p>
                         </div>

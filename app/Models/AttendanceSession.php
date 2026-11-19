@@ -12,9 +12,10 @@ use Illuminate\Support\Str;
 /**
  * Satu sesi absensi (P5M, safety talk, …).
  *
- * Bukti hadir di lokasi: layar sesi menampilkan QR berisi token 6 angka yang
- * berganti tiap 30 detik (juga bisa diketik manual). Token lama ditolak, jadi
- * foto QR yang dikirim ke teman di luar lokasi cepat kedaluwarsa.
+ * Mode absen:
+ * - gps  : QR tempel / tombol di aplikasi + posisi GPS harus di area yang sah (default, dipakai jadwal rutin)
+ * - qr   : + token 6 angka di layar sesi yang berganti tiap 30 detik (paling ketat, untuk event)
+ * - open : tanpa cek lokasi
  */
 class AttendanceSession extends Model
 {
@@ -23,7 +24,7 @@ class AttendanceSession extends Model
     public const TOKEN_GRACE = 3;        // token lama yang masih diterima (≈ 90 detik)
 
     protected $fillable = [
-        'attendance_type_id', 'title', 'date', 'shift', 'starts_at', 'opens_at', 'closes_at', 'late_after',
+        'attendance_type_id', 'attendance_schedule_id', 'location_ids', 'title', 'date', 'shift', 'starts_at', 'opens_at', 'closes_at', 'late_after',
         'location', 'company', 'department', 'target_departments', 'checkin_mode', 'host_id',
         'speaker_nrp', 'speaker_name', 'notes',
     ];
@@ -37,6 +38,8 @@ class AttendanceSession extends Model
             'closes_at' => 'datetime',
             'closed_at' => 'datetime',
             'target_departments' => 'array',
+            'location_ids' => 'array',
+            'late_after' => 'integer',
         ];
     }
 
@@ -83,15 +86,44 @@ class AttendanceSession extends Model
         return $q->whereNull('closed_at')->where('opens_at', '<=', now())->where('closes_at', '>=', now());
     }
 
-    /** Admin & Admin SHE melihat semua sesi; GL hanya sesi yang ia buat/pimpin. */
+    /** Admin & Admin SHE melihat semua sesi; GL: sesi rutin + sesi yang ia buat/pimpin. */
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
-        return $user->canManageContent() ? $q : $q->where(fn ($w) => $w->where('host_id', $user->id)->orWhere('created_by', $user->id));
+        return $user->canManageContent() ? $q : $q->where(fn ($w) => $w->whereNotNull('attendance_schedule_id')->orWhere('host_id', $user->id)->orWhere('created_by', $user->id));
     }
 
     public function canBeManagedBy(User $user): bool
     {
-        return $user->canManageContent() || $this->host_id === $user->id || $this->created_by === $user->id;
+        return $user->canManageContent() || $this->host_id === $user->id || $this->created_by === $user->id
+            || ($this->isRoutine() && $user->canHostAttendance());
+    }
+
+    public function isRoutine(): bool
+    {
+        return $this->attendance_schedule_id !== null;
+    }
+
+    public function requiresGps(): bool
+    {
+        return in_array($this->checkin_mode, ['gps', 'qr'], true);
+    }
+
+    /** Area GPS yang sah untuk sesi ini. */
+    public function allowedLocations(): Collection
+    {
+        return AttendanceLocation::mapped()->when($this->location_ids, fn ($q) => $q->whereIn('id', $this->location_ids))->orderBy('name')->get();
+    }
+
+    public function locationLabel(): ?string
+    {
+        if ($this->location) {
+            return $this->location;
+        }
+        if (! $this->location_ids) {
+            return $this->requiresGps() ? 'Semua area' : null;
+        }
+
+        return AttendanceLocation::whereIn('id', $this->location_ids)->orderBy('name')->pluck('name')->join(', ');
     }
 
     /** Apakah karyawan ini termasuk peserta sasaran (atau sesi terbuka untuk semua). */
@@ -152,12 +184,17 @@ class AttendanceSession extends Model
 
     public function isLateAt(\DateTimeInterface $time): bool
     {
-        return $time > $this->starts_at->copy()->addMinutes($this->late_after);
+        return $this->late_after !== null && $time > $this->starts_at->copy()->addMinutes($this->late_after);
     }
 
     public function displayTitle(): string
     {
         return $this->type->name.($this->title ? ' — '.$this->title : '');
+    }
+
+    public function schedule(): BelongsTo
+    {
+        return $this->belongsTo(AttendanceSchedule::class, 'attendance_schedule_id');
     }
 
     public function type(): BelongsTo

@@ -10,10 +10,10 @@ Bisa dipasang di HP lewat Chrome (PWA), masuk dengan **NRP + PIN 6 angka**, dan 
 | Aplikasi | Semua aplikasi per kategori, pencarian, favorit (bintang), lampu status online/gangguan |
 | Mentari | Robot mekanik asisten (sama dengan Mentari di MekanikPintar): cari aplikasi, info terbaru, bantuan PIN/NRP, siap disambung ke AI |
 | Info | Pengumuman (info / penting / darurat) + semua kampanye |
-| Absen | Scan QR sesi P5M / safety talk (QR berganti tiap 30 detik), cek fatigue jam tidur, riwayat absensi |
+| Absen | Satu QR untuk semua absensi, cek posisi GPS di area (WS 25, Quarry, Crusher), P5M & Safety Talk terjadwal otomatis, cek fatigue jam tidur, riwayat |
 | Profil | Identitas, ganti PIN, pasang aplikasi, bantuan WhatsApp, panel admin |
 | Panel admin `/admin` | Ringkasan statistik, Kampanye, Pengumuman (Admin SHE & Administrator); Aplikasi, Kategori, Pengguna + impor Excel, Mentari, Pengaturan (Administrator) |
-| Panel absensi `/admin/absensi` | Sesi, layar QR live untuk TV, daftar hadir & belum hadir, catat manual, rekap + ekspor Excel (GL / Host, Admin SHE, Administrator) |
+| Panel absensi `/admin/absensi` | Sesi & event, layar live untuk TV, daftar hadir & belum hadir, catat manual, rekap + ekspor Excel (GL / Host); jadwal rutin & pemetaan area GPS sambil berjalan (Admin SHE, Administrator) |
 
 ## Teknologi
 
