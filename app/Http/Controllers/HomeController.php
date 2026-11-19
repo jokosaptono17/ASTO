@@ -37,6 +37,9 @@ class HomeController extends Controller
             'searchIndex' => $apps->map->toClient()->values(),
             'campaignTitle' => Setting::get('campaign_section_title'),
             'attendance' => AttendanceController::todayFor($user),
+            'categories' => $apps->pluck('category')->filter()->unique('id')->sortBy('sort_order')->values(),
+            'announcements' => $announcements->take(4),
+            'hero' => Setting::hero(),
         ]);
     }
 

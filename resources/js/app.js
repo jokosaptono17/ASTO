@@ -96,6 +96,37 @@ function searchCore(index) {
 }
 Alpine.data('appSearch', (index = []) => searchCore(index));
 
+/* ---------- Beranda desktop: tab kategori + pencarian langsung ---------- */
+Alpine.data('homeHero', (index = []) => mix(searchCore(index), {
+    tab: 'semua',
+    clock: new Date(),
+    init() { setInterval(() => { this.clock = new Date(); }, 15000); },
+    get shown() {
+        const list = this.q ? this.results : index.filter((a) => this.tab === 'semua' || a.category === this.tab);
+        return list.slice(0, 10);
+    },
+    get more() {
+        const total = this.q ? this.results.length : index.filter((a) => this.tab === 'semua' || a.category === this.tab).length;
+        return Math.max(0, total - 10);
+    },
+    pick(tab) { this.tab = tab; this.q = ''; },
+    submit() {
+        if (!this.q.trim()) return;
+        const first = this.results[0];
+        if (!first) return this.askMentari();
+        if (first.new_tab) window.open(first.href, '_blank', 'noopener'); else window.location = first.href;
+    },
+    askMentari() {
+        window.dispatchEvent(new CustomEvent('mentari-open', { detail: { ask: this.q } }));
+        this.q = '';
+    },
+    get greeting() {
+        const h = this.clock.getHours();
+        return h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam';
+    },
+    get time() { return this.clock.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); },
+}));
+
 /* ---------- Halaman aplikasi: cari + favorit ---------- */
 // Gabungkan objek tanpa mengeksekusi getter (spread akan membekukan `results`)
 const mix = (...parts) => parts.reduce((target, part) => Object.defineProperties(target, Object.getOwnPropertyDescriptors(part)), {});
@@ -172,9 +203,26 @@ Alpine.data('carousel', (count = 0, auto = 6000) => ({
     },
 }));
 
+/* ---------- Admin: palet perintah (Ctrl+K) ---------- */
+Alpine.data('adminPalette', (entries = [], searches = []) => ({
+    open: false,
+    q: '',
+    cursor: 0,
+    show() { this.open = true; this.q = ''; this.cursor = 0; this.$nextTick(() => this.$refs.q?.focus()); },
+    get items() {
+        const q = normalize(this.q).trim();
+        const list = q ? entries.filter((e) => normalize(`${e.label} ${e.group}`).includes(q)) : entries;
+        const extra = q ? searches.map((s) => ({ ...s, group: 'Cari', href: `${s.href}?q=${encodeURIComponent(this.q.trim())}`, html: `${s.label} <b class="text-ink">“${this.q.trim().replace(/[<>&"]/g, '')}”</b>` })) : [];
+        return [...list, ...extra];
+    },
+    move(d) { const n = this.items.length; if (n) this.cursor = (this.cursor + d + n) % n; },
+    go() { const it = this.items[this.cursor]; if (it) window.location = it.href; },
+}));
+
 Alpine.start();
 
 /* ---------- Service worker ---------- */
 if ('serviceWorker' in navigator && location.protocol === 'https:' || location.hostname === 'localhost') {
     window.addEventListener('load', () => navigator.serviceWorker?.register('/sw.js').catch(() => {}));
 }
+

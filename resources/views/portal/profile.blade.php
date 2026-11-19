@@ -1,7 +1,8 @@
 <x-layouts.portal title="Profil">
     @include('portal._topbar', ['heading' => 'Profil'])
 
-    <div class="space-y-5 px-4">
+    <div class="space-y-5 px-4 lg:grid lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0 lg:px-0">
+        <div class="space-y-5 lg:sticky lg:top-24">
         {{-- Kartu identitas --}}
         <section class="relative overflow-hidden rounded-[26px] border border-neon/20 bg-gradient-to-br from-ridge via-bench to-pit p-5">
             <x-contour class="absolute -top-6 -right-16 h-48 w-80 opacity-50" />
@@ -57,6 +58,8 @@
             </section>
         @endif
 
+        </div>
+        <div class="space-y-5">
         @if ($menteeCount)
             <button type="button" x-data @click="$dispatch('mentari-open', { ask: 'mekanik asuh saya' })" class="flex w-full items-center gap-3 rounded-2xl border border-white/[0.06] bg-bench p-4 text-left">
                 <i class="ri-team-line text-2xl text-neon"></i>
@@ -128,5 +131,6 @@
         </form>
 
         <p class="pt-2 pb-4 text-center text-xs text-mist/60">{{ $siteName }} · {{ \App\Models\Setting::get('slogan') }}</p>
+        </div>
     </div>
 </x-layouts.portal>

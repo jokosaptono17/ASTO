@@ -1,5 +1,8 @@
-<x-layouts.portal title="Beranda" :mentari-tips="['Halo, '.$user->firstName().'! 👋', 'Bingung cari aplikasi? Tanya saya saja.']">
+<x-layouts.portal title="Beranda" :bleed="true" :mentari-tips="['Halo, '.$user->firstName().'! 👋', 'Bingung cari aplikasi? Tanya saya saja.']">
     <div x-data="appSearch(@js($searchIndex))">
+        @include('portal._home-desktop')
+
+        <div class="lg:hidden">
         {{-- Header: kontur pit + identitas --}}
         <header class="pit-header relative overflow-hidden rounded-b-[34px] px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-24">
             <x-contour class="absolute inset-0 h-full w-full opacity-60" />
@@ -70,13 +73,16 @@
                 <i class="ri-sparkling-2-line text-xl text-neon" aria-hidden="true"></i>
             </button>
         </div>
+        </div>{{-- /mobile hero --}}
 
+        <div class="lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-x-8 lg:px-8 lg:pt-10">
+        <div class="min-w-0">
         {{-- Absensi hari ini --}}
         @include('portal.attendance._home-card')
 
         {{-- Pengumuman penting / darurat --}}
         @if ($ticker)
-            <a href="{{ route('info.show', $ticker) }}" class="mx-4 mt-4 flex overflow-hidden rounded-2xl border {{ $ticker->level === 'darurat' ? 'border-alarm/40 bg-alarm/10' : 'border-hivis/30 bg-hivis/[0.07]' }}">
+            <a href="{{ route('info.show', $ticker) }}" class="mx-4 mt-4 flex lg:hidden overflow-hidden rounded-2xl border {{ $ticker->level === 'darurat' ? 'border-alarm/40 bg-alarm/10' : 'border-hivis/30 bg-hivis/[0.07]' }}">
                 <span class="{{ $ticker->level === 'darurat' ? 'hazard' : 'bg-hivis' }} w-2 shrink-0"></span>
                 <span class="ticker-sweep relative flex min-w-0 grow items-center gap-3 px-4 py-3">
                     <i class="{{ \App\Models\Announcement::LEVELS[$ticker->level]['icon'] }} text-2xl {{ $ticker->level === 'darurat' ? 'text-alarm' : 'text-hivis' }}"></i>
@@ -91,7 +97,7 @@
 
         {{-- Terakhir dibuka --}}
         @if ($recent->isNotEmpty())
-            <section class="mt-7">
+            <section class="mt-7 lg:hidden">
                 <h2 class="section-title px-4">Terakhir dibuka</h2>
                 <div class="scroller mt-3 pb-1">
                     @foreach ($recent as $app)
@@ -110,11 +116,11 @@
 
         {{-- Banner lebar --}}
         @if ($banners->isNotEmpty())
-            <section class="mt-7" x-data="carousel({{ $banners->count() }})" aria-label="Banner">
-                <div x-ref="track" @scroll.debounce.60ms="onScroll()" @pointerdown="clearInterval(timer)" class="scroller">
+            <section class="mt-7 lg:mt-10" x-data="carousel({{ $banners->count() }})" aria-label="Banner">
+                <div x-ref="track" @scroll.debounce.60ms="onScroll()" @pointerdown="clearInterval(timer)" class="scroller lg:scroll-px-0 lg:gap-4 lg:px-0">
                     @foreach ($banners as $banner)
                         <a href="{{ route('campaigns.open', $banner) }}" @if ($banner->link_url && ! str_starts_with($banner->link_url, '/')) target="_blank" rel="noopener" @endif
-                           class="campaign-card aspect-[2/1] w-[calc(100%-8px)]">
+                           class="campaign-card aspect-[2/1] w-[calc(100%-8px)] {{ $banners->count() > 1 ? 'lg:w-[calc(50%-8px)]' : 'lg:w-full' }}">
                             <img src="{{ $banner->imageUrl() }}" alt="{{ $banner->title }}" loading="lazy">
                         </a>
                     @endforeach
@@ -130,22 +136,26 @@
         @endif
 
         {{-- Kampanye (kartu 4:5) --}}
-        <section class="mt-7">
-            <div class="flex items-end justify-between px-4">
-                <h2 class="section-title">{{ $campaignTitle }}</h2>
+        <section class="mt-7 lg:mt-10" x-data="{ scroll(dir) { $refs.row.scrollBy({ left: dir * $refs.row.clientWidth * .8, behavior: 'smooth' }) } }">
+            <div class="flex items-end justify-between gap-2 px-4 lg:px-0">
+                <h2 class="section-title grow">{{ $campaignTitle }}</h2>
+                @if ($cards->count() > 4)
+                    <button type="button" @click="scroll(-1)" class="icon-btn hidden h-9 w-9 border border-white/10 lg:grid" aria-label="Sebelumnya"><i class="ri-arrow-left-s-line text-xl"></i></button>
+                    <button type="button" @click="scroll(1)" class="icon-btn hidden h-9 w-9 border border-white/10 lg:grid" aria-label="Berikutnya"><i class="ri-arrow-right-s-line text-xl"></i></button>
+                @endif
                 @if ($cards->isNotEmpty()) <a href="{{ route('info.index') }}#kampanye" class="section-link">Semua <i class="ri-arrow-right-s-line"></i></a> @endif
             </div>
             @if ($cards->isNotEmpty())
-                <div class="scroller mt-3 pb-1">
+                <div x-ref="row" class="scroller mt-3 pb-1 lg:mt-4 lg:scroll-px-0 lg:gap-4 lg:px-0">
                     @foreach ($cards as $card)
                         <a href="{{ route('campaigns.open', $card) }}" @if ($card->link_url && ! str_starts_with($card->link_url, '/')) target="_blank" rel="noopener" @endif
-                           class="campaign-card aspect-[4/5] w-[46%] min-w-[168px]">
+                           class="campaign-card aspect-[4/5] w-[46%] min-w-[168px] lg:w-[calc(25%-12px)] lg:min-w-0">
                             <img src="{{ $card->imageUrl() }}" alt="{{ $card->title }}" loading="lazy">
                         </a>
                     @endforeach
                 </div>
             @else
-                <div class="mx-4 mt-3 flex items-center gap-4 rounded-[22px] border border-dashed border-white/10 p-5">
+                <div class="mx-4 mt-3 flex items-center gap-4 rounded-[22px] border border-dashed border-white/10 p-5 lg:mx-0">
                     <x-mentari :size="64" class="m-still shrink-0" />
                     <p class="text-sm leading-relaxed text-mist">Belum ada kampanye yang tayang. Kampanye safety, training, dan improvement akan muncul di sini.</p>
                 </div>
@@ -154,7 +164,7 @@
 
         {{-- Favorit --}}
         @if ($favorites->isNotEmpty())
-            <section class="mt-7 px-4">
+            <section class="mt-7 px-4 lg:hidden">
                 <div class="flex items-end justify-between">
                     <h2 class="section-title">Favorit saya</h2>
                     <a href="{{ route('apps.index', ['tab' => 'favorit']) }}" class="section-link">Atur <i class="ri-arrow-right-s-line"></i></a>
@@ -171,7 +181,7 @@
         @endif
 
         {{-- Pasang aplikasi --}}
-        <section x-data x-show="!$store.install.installed && ($store.install.prompt || $store.install.ios)" x-cloak class="mx-4 mt-7">
+        <section x-data x-show="!$store.install.installed && ($store.install.prompt || $store.install.ios)" x-cloak class="mx-4 mt-7 lg:hidden">
             <div class="flex items-center gap-4 rounded-[22px] border border-neon/20 bg-gradient-to-r from-neon/10 to-transparent p-4">
                 <img src="/icons/icon-192.png" alt="" class="h-12 w-12 rounded-xl">
                 <div class="min-w-0 grow">
@@ -182,10 +192,14 @@
             </div>
         </section>
 
-        <footer class="mt-10 flex flex-col items-center gap-3 px-4 pb-4 text-center">
+        <footer class="mt-10 flex flex-col items-center gap-3 px-4 pb-4 text-center lg:hidden">
             <img src="/images/kpp-mining.png" alt="KPP Mining" class="h-10 w-auto opacity-70">
             <p class="text-xs text-mist/70">Plant ASTO · PT Kalimantan Prima Persada</p>
         </footer>
+        </div>{{-- /kolom utama --}}
+
+        @include('portal._home-aside')
+        </div>{{-- /grid --}}
 
         {{-- Lapisan pencarian --}}
         <template x-teleport="body">
