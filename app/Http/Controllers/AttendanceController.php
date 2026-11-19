@@ -221,6 +221,56 @@ class AttendanceController extends Controller
             ->values();
     }
 
+    /**
+     * Ringkasan absensi untuk kartu di beranda: sesi yang dibuka, linimasa hari ini,
+     * sesi berikutnya, dan statistik bulan ini.
+     */
+    public static function todayFor(User $user): array
+    {
+        $open = self::openFor($user);
+        $mine = AttendanceRecord::with('location')->where('nrp', $user->nrp)->where('checked_in_at', '>=', today()->subDay())->get()->keyBy('attendance_session_id');
+
+        $timeline = AttendanceSession::with('type')->whereNull('closed_at')
+            ->where(fn ($q) => $q->whereDate('date', today())->orWhere(fn ($w) => $w->where('opens_at', '<=', now())->where('closes_at', '>=', now())))
+            ->orderBy('opens_at')->get()
+            ->filter(fn (AttendanceSession $s) => $s->targets($user) || $mine->has($s->id))
+            ->map(fn (AttendanceSession $s) => [
+                'name' => $s->type->name.($s->title ? ' '.$s->title : ''),
+                'short' => $s->isRoutine() ? trim($s->type->name.' '.$s->title) : $s->type->name,
+                'color' => $s->type->color,
+                'time' => $s->opens_at->format('H:i'),
+                'state' => $mine->has($s->id) ? 'done' : ($s->status() === 'selesai' ? 'missed' : ($s->isOpen() ? 'open' : 'later')),
+                'at' => $mine->get($s->id)?->checked_in_at->format('H:i'),
+            ])->values();
+
+        $next = AttendanceSession::with('type')->whereNull('closed_at')->where('opens_at', '>', now())->where('opens_at', '<', now()->addDay())
+            ->orderBy('opens_at')->get()->first(fn ($s) => $s->targets($user));
+
+        $month = AttendanceRecord::where('nrp', $user->nrp)->where('checked_in_at', '>=', now()->startOfMonth());
+        $days = AttendanceRecord::where('nrp', $user->nrp)->where('checked_in_at', '>=', today()->subDays(60))->pluck('checked_in_at')
+            ->map(fn ($d) => $d->toDateString())->unique()->flip();
+        $streak = 0;
+        $day = $days->has(today()->toDateString()) ? today() : today()->subDay();
+        while ($days->has($day->toDateString())) {
+            $streak++;
+            $day = $day->copy()->subDay();
+        }
+
+        return [
+            'open' => $open,
+            'pending' => $open->reject(fn ($s) => $s->already)->values(),
+            'done' => $open->filter(fn ($s) => $s->already)->map(fn ($s) => tap($s, fn ($s) => $s->setRelation('myRecord', $mine->get($s->id))))->values(),
+            'timeline' => $timeline,
+            'next' => $next,
+            'last' => AttendanceRecord::with('session.type', 'location')->where('nrp', $user->nrp)->latest('checked_in_at')->first(),
+            'stats' => [
+                'month' => (clone $month)->count(),
+                'avgSleep' => (int) round((float) (clone $month)->whereNotNull('sleep_minutes')->avg('sleep_minutes')),
+                'streak' => $streak,
+            ],
+        ];
+    }
+
     /** Catat kehadiran (dipakai karyawan & host). */
     public static function record(AttendanceSession $session, User $user, array $data, ?User $recorder = null): AttendanceRecord
     {
