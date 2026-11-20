@@ -41,6 +41,12 @@ Route::middleware('auth')->group(function () {
     // Absensi karyawan
     Route::post('/kampanye/{campaign}/popup', [\App\Http\Controllers\PopupController::class, 'seen'])->middleware('throttle:30,1')->name('popup.seen');
     Route::post('/kampanye/{campaign}/popup/tutup', [\App\Http\Controllers\PopupController::class, 'close'])->middleware('throttle:30,1')->name('popup.close');
+    // Poin HEBAT
+    Route::get('/poin', [\App\Http\Controllers\PointController::class, 'index'])->name('points.index');
+    Route::get('/poin/hadiah', [\App\Http\Controllers\PointController::class, 'rewards'])->name('points.rewards');
+    Route::post('/poin/hadiah/{reward}/tukar', [\App\Http\Controllers\PointController::class, 'redeem'])->middleware('throttle:20,1')->name('points.redeem');
+    Route::get('/poin/kupon/{redemption}', [\App\Http\Controllers\PointController::class, 'coupon'])->name('points.coupon');
+
     Route::get('/absen', [AttendanceController::class, 'scan'])->name('attendance.scan');
     Route::get('/absen/lokasi', [AttendanceController::class, 'locate'])->middleware('throttle:60,1')->name('attendance.locate');
     Route::post('/absen/kode', [AttendanceController::class, 'enterCode'])->middleware('throttle:20,1')->name('attendance.code');
@@ -93,6 +99,31 @@ Route::middleware('auth')->group(function () {
     });
 
     // Panel admin: Admin SHE mengelola kampanye & pengumuman, Administrator mengelola semuanya
+    // Poin HEBAT — Administrator & Admin SHE (persetujuan & penyesuaian: Administrator)
+    Route::prefix('admin/poin')->name('admin.points.')->middleware('can:manage-points')->group(function () {
+        Route::get('/', Admin\Points\OverviewController::class)->name('index');
+        Route::get('pemberian', [Admin\Points\GrantController::class, 'index'])->name('grants.index');
+        Route::get('pemberian/baru', [Admin\Points\GrantController::class, 'create'])->name('grants.create');
+        Route::post('pemberian', [Admin\Points\GrantController::class, 'store'])->name('grants.store');
+        Route::get('pemberian/{grant}', [Admin\Points\GrantController::class, 'show'])->name('grants.show');
+        Route::put('pemberian/{grant}', [Admin\Points\GrantController::class, 'update'])->name('grants.update');
+        Route::delete('pemberian/{grant}', [Admin\Points\GrantController::class, 'destroy'])->name('grants.destroy');
+        Route::post('pemberian/{grant}/setujui', [Admin\Points\GrantController::class, 'approve'])->middleware('can:admin')->name('grants.approve');
+        Route::post('pemberian/{grant}/tolak', [Admin\Points\GrantController::class, 'reject'])->middleware('can:admin')->name('grants.reject');
+        Route::get('cari-karyawan', [Admin\Points\GrantController::class, 'people'])->name('people');
+        Route::resource('hadiah', Admin\Points\RewardController::class)->except('show')->parameters(['hadiah' => 'reward'])->names('rewards');
+        Route::get('kupon', [Admin\Points\RedemptionController::class, 'index'])->name('redemptions.index');
+        Route::post('kupon/cari', [Admin\Points\RedemptionController::class, 'lookup'])->name('redemptions.lookup');
+        Route::get('kupon/{redemption}', [Admin\Points\RedemptionController::class, 'show'])->name('redemptions.show');
+        Route::post('kupon/{redemption}/serahkan', [Admin\Points\RedemptionController::class, 'fulfill'])->name('redemptions.fulfill');
+        Route::post('kupon/{redemption}/batalkan', [Admin\Points\RedemptionController::class, 'cancel'])->name('redemptions.cancel');
+        Route::get('riwayat', [Admin\Points\LedgerController::class, 'index'])->name('ledger');
+        Route::get('riwayat/ekspor', [Admin\Points\LedgerController::class, 'export'])->name('ledger.export');
+        Route::post('penyesuaian', [Admin\Points\LedgerController::class, 'adjust'])->middleware('can:admin')->name('adjust');
+        Route::get('aturan', [Admin\Points\LedgerController::class, 'rules'])->name('rules');
+        Route::put('aturan', [Admin\Points\LedgerController::class, 'saveRules'])->name('rules.update');
+    });
+
     Route::prefix('admin')->name('admin.')->middleware('can:manage-content')->group(function () {
         Route::get('/', Admin\DashboardController::class)->name('dashboard');
 

@@ -203,6 +203,59 @@ Alpine.data('carousel', (count = 0, auto = 6000) => ({
     },
 }));
 
+/* ---------- Poin HEBAT: katalog hadiah ---------- */
+Alpine.data('rewardShop', (items = [], balance = 0, reopen = null) => ({
+    items, balance, cat: 'semua', sel: null, busy: false,
+    init() {
+        if (reopen) this.open(items.find((r) => r.id === reopen));
+        const hash = location.hash.match(/^#hadiah-(\d+)$/);
+        if (!reopen && hash) this.$nextTick(() => document.getElementById(`hadiah-${hash[1]}`)?.scrollIntoView({ block: 'center' }));
+    },
+    get shown() {
+        if (this.cat === 'semua') return this.items;
+        if (this.cat === 'bisa') return this.items.filter((r) => this.canRedeem(r));
+        return this.items.filter((r) => r.category === this.cat);
+    },
+    open(r) { if (!r) return; this.sel = r; this.busy = false; this.$nextTick(() => this.$refs.pin?.focus()); },
+    canRedeem(r) { return r.stock !== 0 && this.balance >= r.cost && !(r.limit && r.mine >= r.limit); },
+    reason(r) {
+        if (r.stock === 0) return 'Stok hadiah ini sedang habis.';
+        if (r.limit && r.mine >= r.limit) return `Anda sudah mencapai batas ${r.limit}× untuk hadiah ini.`;
+        return `Poin Anda kurang ${this.fmt(r.cost - this.balance)}. Ikuti P5M & safety talk untuk menambah poin.`;
+    },
+    fmt(n) { return Number(n).toLocaleString('id-ID'); },
+}));
+
+/* ---------- Admin: penerima pemberian poin ---------- */
+Alpine.data('grantEditor', (initial = [], peopleUrl = '', editable = true) => ({
+    list: initial.map((r) => ({ ...r, points: Number(r.points) || 1, note: r.note || '' })),
+    editable, defaultPoints: initial[0]?.points || 50, q: '', results: [], paste: false, pasteText: '', pasteMsg: '',
+    get total() { return this.list.reduce((s, r) => s + (Number(r.points) || 0), 0); },
+    fmt(n) { return Number(n).toLocaleString('id-ID'); },
+    async fetchPeople(params) {
+        const res = await fetch(`${peopleUrl}?${new URLSearchParams(params)}`, { headers: { Accept: 'application/json' } });
+        return res.ok ? res.json() : [];
+    },
+    async search() { this.results = this.q.trim().length < 2 ? [] : await this.fetchPeople({ q: this.q.trim() }); },
+    add(p, points = null, note = '') {
+        const found = this.list.find((r) => r.id === p.id);
+        if (found) { if (points) found.points = points; if (note) found.note = note; }
+        else this.list.push({ ...p, points: points || this.defaultPoints, note });
+        this.q = ''; this.results = [];
+    },
+    async addDept(dept) { if (!dept) return; (await this.fetchPeople({ department: dept })).forEach((p) => this.add(p)); },
+    async importPaste() {
+        const rows = this.pasteText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+            .map((l) => (/[\t;,]/.test(l) ? l.split(/[\t;,]/) : l.split(/\s+/)).map((c) => c.trim()));
+        const want = new Map(rows.filter((r) => r[0]).map((r) => [r[0].toUpperCase(), { points: parseInt(r[1], 10) || null, note: r.slice(2).join(' ').trim() }]));
+        if (!want.size) return;
+        const people = await this.fetchPeople({ nrps: [...want.keys()].join(',') });
+        people.forEach((p) => { const w = want.get(p.nrp); this.add(p, w?.points, w?.note || ''); want.delete(p.nrp); });
+        this.pasteMsg = want.size ? `${people.length} ditambahkan. Tidak ditemukan: ${[...want.keys()].join(', ')}` : `${people.length} karyawan ditambahkan.`;
+        if (!want.size) { this.pasteText = ''; this.paste = false; }
+    },
+}));
+
 /* ---------- Pop-up kampanye saat aplikasi dibuka ---------- */
 Alpine.data('campaignPopup', (cfg) => ({
     cfg,

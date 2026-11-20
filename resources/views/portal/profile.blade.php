@@ -82,6 +82,13 @@
             </a>
         @endcan
 
+        <a href="{{ route('points.index') }}" class="flex items-center gap-3 rounded-2xl border border-hivis/25 bg-hivis/[0.05] p-4">
+            <x-coin :size="28" />
+            <span class="grow"><span class="block font-semibold">Poin HEBAT</span><span class="text-sm text-mist">Saldo, riwayat, kupon & katalog hadiah</span></span>
+            <span class="font-display font-bold text-[#ffd76a]">{{ number_format(auth()->user()->points_balance, 0, ',', '.') }}</span>
+            <i class="ri-arrow-right-s-line text-xl text-mist"></i>
+        </a>
+
         <a href="{{ route('attendance.history') }}" class="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-bench p-4">
             <i class="ri-calendar-check-line text-2xl text-neon"></i>
             <span class="grow"><span class="block font-semibold">Riwayat absensi</span><span class="text-sm text-mist">P5M, safety talk, dan kegiatan lain</span></span>

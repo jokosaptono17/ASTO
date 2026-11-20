@@ -186,6 +186,7 @@ class AttendanceSessionController extends Controller
     {
         $this->authorizeSession($request, $session);
         abort_unless($record->attendance_session_id === $session->id, 404);
+        app(\App\Services\Points\PointService::class)->revokeAttendance($record, $request->user());
         $record->delete();
         ActivityLog::record('absensi', "Menghapus kehadiran {$record->name} ({$record->nrp}) dari sesi {$session->type->name} {$session->starts_at->format('d/m')}");
 

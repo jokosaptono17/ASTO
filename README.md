@@ -50,3 +50,4 @@ Tes: `php artisan test`
 - [docs/DEPLOY.md](docs/DEPLOY.md) — pasang di VPS (aaPanel) untuk `plantasto.my.id`
 - [docs/mentari.md](docs/mentari.md) — kontrak layanan AI Mentari
 - [docs/absensi.md](docs/absensi.md) — panduan absensi P5M / safety talk
+- [docs/poin.md](docs/poin.md) — Poin HEBAT: aturan, pemberian, penukaran

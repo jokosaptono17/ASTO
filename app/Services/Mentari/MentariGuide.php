@@ -21,7 +21,7 @@ class MentariGuide
 {
     public const CHIPS = [
         'guest' => ['Lupa PIN', 'NRP saya belum terdaftar', 'Cara pasang aplikasi', 'Apa itu AstoOne?'],
-        'user' => ['Data saya', 'Absensi saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?'],
+        'user' => ['Poin saya', 'Absensi saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?'],
         'gl' => ['Siapa yang belum absen?', 'Mekanik asuh saya', 'Absensi saya', 'Training saya', 'Info terbaru'],
         'admin' => ['Statistik portal', 'Siapa yang belum absen?', 'Siapa yang belum aktivasi?', 'Aplikasi yang gangguan', 'Kampanye paling banyak diklik'],
     ];
@@ -31,7 +31,7 @@ class MentariGuide
     /** Intent yang boleh diserahkan ke AI bila MENTARI_ENDPOINT diatur. */
     public const AI_INTENTS = ['fallback', 'greeting', 'identity', 'thanks'];
 
-    public function __construct(private PeopleDesk $people, private AttendanceDesk $attendance) {}
+    public function __construct(private PeopleDesk $people, private AttendanceDesk $attendance, private PointsDesk $points) {}
 
     public static function chipsFor(?User $user): array
     {
@@ -60,6 +60,7 @@ class MentariGuide
 
         $steps = [
             'appKnowledge' => fn () => $this->appKnowledge($q),
+            'points' => fn () => $this->points->answer($q, $viewer),
             'self' => fn () => $this->people->self($q, $viewer),
             'attendance' => fn () => $this->attendance->answer($q, $viewer),
             'nrp' => fn () => $this->people->byNrp($message, $q, $viewer),

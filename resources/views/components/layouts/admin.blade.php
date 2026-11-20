@@ -1,4 +1,4 @@
-@props(['title' => 'Panel admin', 'heading' => null, 'actions' => null, 'hideHeading' => false])
+@props(['title' => 'Panel admin', 'heading' => null, 'actions' => null, 'hideHeading' => false, 'subtitle' => null])
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -16,6 +16,13 @@
             ['admin.attendance.recap', 'ri-bar-chart-2-line', 'Rekap', 'host-attendance', 'admin.attendance.recap*'],
             ['admin.attendance.schedules', 'ri-repeat-line', 'Jadwal rutin', 'manage-content', 'admin.attendance.schedules*'],
             ['admin.attendance.locations', 'ri-map-pin-range-line', 'Area GPS', 'manage-content', 'admin.attendance.locations*'],
+        ],
+        'Poin HEBAT' => [
+            ['admin.points.index', 'ri-coin-line', 'Ringkasan poin', 'manage-points', 'admin.points.index'],
+            ['admin.points.grants.index', 'ri-trophy-line', 'Pemberian poin', 'manage-points', 'admin.points.grants.*'],
+            ['admin.points.redemptions.index', 'ri-coupon-3-line', 'Kupon & penyerahan', 'manage-points', 'admin.points.redemptions.*'],
+            ['admin.points.rewards.index', 'ri-gift-2-line', 'Katalog hadiah', 'manage-points', 'admin.points.rewards.*'],
+            ['admin.points.ledger', 'ri-file-list-3-line', 'Riwayat & aturan', 'manage-points', ['admin.points.ledger*', 'admin.points.rules*']],
         ],
         'Konten' => [
             ['admin.campaigns.index', 'ri-image-2-line', 'Kampanye', 'manage-content', 'admin.campaigns.*'],
@@ -38,6 +45,9 @@
             ['Cetak poster QR absensi', 'admin.attendance.poster', 'ri-printer-line', 'host-attendance', 'Aksi cepat'],
             ['Tambah pengguna', 'admin.users.create', 'ri-user-add-line', 'admin', 'Aksi cepat'],
             ['Tambah aplikasi', 'admin.apps.create', 'ri-apps-line', 'admin', 'Aksi cepat'],
+            ['Beri poin untuk event', 'admin.points.grants.create', 'ri-trophy-line', 'manage-points', 'Aksi cepat'],
+            ['Tambah hadiah', 'admin.points.rewards.create', 'ri-gift-2-line', 'manage-points', 'Aksi cepat'],
+            ['Aturan poin otomatis', 'admin.points.rules', 'ri-settings-3-line', 'manage-points', 'Aksi cepat'],
             ['Buka portal', 'home', 'ri-home-5-line', 'host-attendance', 'Aksi cepat'],
         ])
         ->filter(fn ($i) => $user->can($i[3]))
@@ -45,8 +55,11 @@
     $search = array_filter([
         $user->can('admin') ? ['label' => 'Cari pengguna', 'href' => route('admin.users.index'), 'icon' => 'ri-user-search-line'] : null,
         $user->can('admin') ? ['label' => 'Cari aplikasi', 'href' => route('admin.apps.index'), 'icon' => 'ri-search-eye-line'] : null,
+        $user->can('manage-points') ? ['label' => 'Cari kupon / riwayat poin', 'href' => route('admin.points.ledger'), 'icon' => 'ri-coin-line'] : null,
         $user->can('host-attendance') ? ['label' => 'Cari di rekap absensi', 'href' => route('admin.attendance.recap'), 'icon' => 'ri-file-search-line'] : null,
     ]);
+    $pendingCoupons = $user->can('manage-points') ? \App\Models\Redemption::where('status', 'pending')->count() : 0;
+    $pendingGrants = $user->can('manage-points') ? \App\Models\PointGrant::where('status', 'pending')->count() : 0;
     $liveSessions = $user->can('host-attendance') ? \App\Models\AttendanceSession::openNow()->visibleTo($user)->count() : 0;
     $hero = \App\Models\Setting::hero();
 @endphp
@@ -84,6 +97,12 @@
                         @foreach ($visible as [$route, $icon, $label, $ability, $pattern])
                             <a href="{{ route($route) }}" class="side-link" @if (request()->routeIs(...(array) $pattern)) aria-current="page" @endif>
                                 <i class="{{ $icon }}"></i><span class="grow">{{ $label }}</span>
+                                @if ($route === 'admin.points.redemptions.index' && $pendingCoupons)
+                                    <span class="rounded-full bg-hivis/15 px-2 py-0.5 text-[11px] font-semibold text-hivis">{{ $pendingCoupons }}</span>
+                                @endif
+                                @if ($route === 'admin.points.grants.index' && $pendingGrants)
+                                    <span class="rounded-full bg-hivis/15 px-2 py-0.5 text-[11px] font-semibold text-hivis">{{ $pendingGrants }}</span>
+                                @endif
                                 @if ($route === 'admin.attendance.index' && $liveSessions)
                                     <span class="flex items-center gap-1 rounded-full bg-neon/15 px-2 py-0.5 text-[11px] font-semibold text-neon"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-neon"></span>{{ $liveSessions }}</span>
                                 @endif
@@ -132,7 +151,7 @@
             <div class="mb-6 hidden items-end gap-4 {{ $hideHeading ? '' : 'lg:flex' }}">
                 <div class="grow">
                     <h1 class="font-display text-[2rem] leading-tight font-bold">{{ $heading ?? $title }}</h1>
-                    @isset($subtitle) <p class="mt-1 text-fog">{{ $subtitle }}</p> @endisset
+                    @if ($subtitle) <p class="mt-1 text-fog">{{ $subtitle }}</p> @endif
                 </div>
                 {{ $actions }}
             </div>

@@ -6,7 +6,8 @@
         ['home', 'Beranda', ['home']],
         ['apps.index', 'Aplikasi', ['apps.*']],
         ['attendance.scan', 'Absen', ['attendance.*']],
-        ['info.index', 'Info & Kampanye', ['info.*', 'campaigns.*']],
+        ['points.index', 'Poin HEBAT', ['points.*']],
+        ['info.index', 'Info', ['info.*', 'campaigns.*']],
     ];
 @endphp
 <header x-data="{ scrolled: false, menu: false }" @scroll.window.throttle.50ms="scrolled = window.scrollY > 24"
@@ -62,6 +63,7 @@
                         </div>
                         <nav class="p-2 text-sm">
                             <a href="{{ route('profile') }}" class="side-link"><i class="ri-user-3-line"></i>Profil & PIN</a>
+                            <a href="{{ route('points.index') }}" class="side-link"><i class="ri-coin-line"></i><span class="grow">Poin HEBAT</span><span class="font-display text-xs font-bold text-hivis">{{ number_format($me->points_balance, 0, ',', '.') }}</span></a>
                             <a href="{{ route('attendance.history') }}" class="side-link"><i class="ri-calendar-check-line"></i>Riwayat absensi</a>
                             <a href="{{ route('apps.index', ['tab' => 'favorit']) }}" class="side-link"><i class="ri-star-line"></i>Aplikasi favorit</a>
                             @can('manage-content')

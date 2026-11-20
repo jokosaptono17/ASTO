@@ -277,7 +277,7 @@ class AttendanceController extends Controller
         $sleep = AttendanceRecord::classifySleep($data['sleep_at'] ?? null, $data['wake_at'] ?? null);
         $now = now();
 
-        return DB::transaction(fn () => AttendanceRecord::firstOrCreate(
+        $record = DB::transaction(fn () => AttendanceRecord::firstOrCreate(
             ['attendance_session_id' => $session->id, 'nrp' => $user->nrp],
             [
                 'user_id' => $user->id,
@@ -304,6 +304,13 @@ class AttendanceController extends Controller
                 'device_id' => $data['device_id'] ?? null,
             ],
         ));
+
+        // Poin HEBAT otomatis (hanya untuk kehadiran baru)
+        if ($record->wasRecentlyCreated) {
+            app(\App\Services\Points\PointService::class)->awardAttendance($record);
+        }
+
+        return $record;
     }
 
     /** @return array{status: string, location: null, distance: null, accuracy: null} */
