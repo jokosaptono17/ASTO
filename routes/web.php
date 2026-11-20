@@ -39,6 +39,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/kampanye/{campaign}', [InfoController::class, 'campaign'])->name('campaigns.open');
 
     // Absensi karyawan
+    Route::post('/kampanye/{campaign}/popup', [\App\Http\Controllers\PopupController::class, 'seen'])->middleware('throttle:30,1')->name('popup.seen');
+    Route::post('/kampanye/{campaign}/popup/tutup', [\App\Http\Controllers\PopupController::class, 'close'])->middleware('throttle:30,1')->name('popup.close');
     Route::get('/absen', [AttendanceController::class, 'scan'])->name('attendance.scan');
     Route::get('/absen/lokasi', [AttendanceController::class, 'locate'])->middleware('throttle:60,1')->name('attendance.locate');
     Route::post('/absen/kode', [AttendanceController::class, 'enterCode'])->middleware('throttle:20,1')->name('attendance.code');

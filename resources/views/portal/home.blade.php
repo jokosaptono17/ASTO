@@ -237,4 +237,5 @@
             </div>
         </template>
     </div>
+    @include('portal._popup')
 </x-layouts.portal>

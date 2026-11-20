@@ -38,7 +38,7 @@
             <div class="mt-3 grid grid-cols-2 gap-3 lg:mt-4 lg:gap-4">
                 @foreach ($campaigns as $c)
                     <a href="{{ route('campaigns.open', $c) }}" @if ($c->link_url && ! str_starts_with($c->link_url, '/')) target="_blank" rel="noopener" @endif
-                       class="campaign-card {{ $c->format === 'banner' ? 'col-span-2 aspect-[2/1]' : 'aspect-[4/5]' }}">
+                       class="campaign-card {{ ['banner' => 'col-span-2 aspect-[2/1]', 'popup' => 'aspect-[3/4]'][$c->format] ?? 'aspect-[4/5]' }}">
                         <img src="{{ $c->imageUrl() }}" alt="{{ $c->title }}" loading="lazy">
                     </a>
                 @endforeach
