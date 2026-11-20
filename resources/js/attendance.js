@@ -10,7 +10,7 @@ document.addEventListener('alpine:init', () => {
     const Alpine = window.Alpine;
 
     /* ---------- Pemindai QR karyawan ---------- */
-    Alpine.data('qrScanner', (auto = true) => ({
+    Alpine.data('qrScanner', (auto = true, prefix = '/absen/', okText = 'QR terbaca, membuka absen…', badText = 'QR ini bukan QR absen AstoOne.') => ({
         state: 'idle', // idle | starting | scanning | error
         message: 'Arahkan kamera ke QR yang tampil di layar P5M / safety talk.',
         stream: null,
@@ -75,16 +75,16 @@ document.addEventListener('alpine:init', () => {
         handle(text) {
             try {
                 const url = new URL(text, location.origin);
-                if (url.origin === location.origin && url.pathname.startsWith('/absen/')) {
+                if (url.origin === location.origin && url.pathname.startsWith(prefix)) {
                     if (navigator.vibrate) navigator.vibrate(60);
                     this.state = 'starting';
-                    this.message = 'QR terbaca, membuka absen…';
+                    this.message = okText;
                     this.stop();
                     location.href = url.href;
                     return true;
                 }
             } catch { /* bukan URL */ }
-            this.message = 'QR ini bukan QR absen AstoOne.';
+            this.message = badText;
             return false;
         },
     }));

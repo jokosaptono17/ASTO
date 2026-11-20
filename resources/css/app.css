@@ -218,3 +218,8 @@
 @keyframes mist { from { transform: translateX(-8%); } to { transform: translateX(8%); } }
 .hero-mist { animation: mist 26s ease-in-out infinite alternate; }
 @media (prefers-reduced-motion: reduce) { .hero-drift, .hero-mist { animation: none; } }
+
+/* ---------- Poin HEBAT: konfeti saat tukar ---------- */
+.confetti span { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: 0; animation: confetti 2.4s cubic-bezier(.2,.6,.4,1) var(--d) forwards; }
+@keyframes confetti { 0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0); } 100% { opacity: 0; transform: translate3d(var(--x), 105vh, 0) rotate(540deg); } }
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } }

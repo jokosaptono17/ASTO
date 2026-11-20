@@ -40,6 +40,12 @@ class HomeController extends Controller
             'categories' => $apps->pluck('category')->filter()->unique('id')->sortBy('sort_order')->values(),
             'announcements' => $announcements->take(4),
             'hero' => Setting::hero(),
+            'points' => [
+                'balance' => (int) $user->points_balance,
+                'level' => \App\Services\Points\PointService::level($user),
+                'monthIn' => (int) \App\Models\PointTransaction::where('user_id', $user->id)->where('amount', '>', 0)->whereIn('kind', ['earn', 'grant', 'adjust'])->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
+                'coupons' => \App\Models\Redemption::where('user_id', $user->id)->where('status', 'pending')->count(),
+            ],
             // Pop-up kampanye; admin bisa pratinjau dengan ?pratinjau-popup={id}
             'popup' => ($preview = $request->query('pratinjau-popup')) && $user->canManageContent()
                 ? Campaign::where('format', 'popup')->find($preview)

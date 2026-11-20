@@ -80,6 +80,9 @@
         {{-- Absensi hari ini --}}
         @include('portal.attendance._home-card')
 
+        {{-- Poin HEBAT --}}
+        @include('portal.points._home-strip')
+
         {{-- Pengumuman penting / darurat --}}
         @if ($ticker)
             <a href="{{ route('info.show', $ticker) }}" class="mx-4 mt-4 flex lg:hidden overflow-hidden rounded-2xl border {{ $ticker->level === 'darurat' ? 'border-alarm/40 bg-alarm/10' : 'border-hivis/30 bg-hivis/[0.07]' }}">

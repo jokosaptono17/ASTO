@@ -16,6 +16,7 @@
                 <li><a href="{{ route('home') }}" class="hover:text-ink">Beranda</a></li>
                 <li><a href="{{ route('apps.index') }}" class="hover:text-ink">Semua aplikasi</a></li>
                 <li><a href="{{ route('attendance.scan') }}" class="hover:text-ink">Absen P5M & safety talk</a></li>
+                <li><a href="{{ route('points.index') }}" class="hover:text-ink">Poin HEBAT & hadiah</a></li>
                 <li><a href="{{ route('info.index') }}" class="hover:text-ink">Info & kampanye</a></li>
             </ul>
         </div>
