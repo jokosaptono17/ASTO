@@ -40,6 +40,11 @@ class HomeController extends Controller
             'categories' => $apps->pluck('category')->filter()->unique('id')->sortBy('sort_order')->values(),
             'announcements' => $announcements->take(4),
             'hero' => Setting::hero(),
+            // Pop-up kampanye; admin bisa pratinjau dengan ?pratinjau-popup={id}
+            'popup' => ($preview = $request->query('pratinjau-popup')) && $user->canManageContent()
+                ? Campaign::where('format', 'popup')->find($preview)
+                : Campaign::popupFor($user),
+            'popupPreview' => (bool) ($preview ?? false),
         ]);
     }
 

@@ -203,6 +203,39 @@ Alpine.data('carousel', (count = 0, auto = 6000) => ({
     },
 }));
 
+/* ---------- Pop-up kampanye saat aplikasi dibuka ---------- */
+Alpine.data('campaignPopup', (cfg) => ({
+    cfg,
+    open: false,
+    left: cfg.seconds,
+    timer: null,
+    init() {
+        const key = `astoone-popup-${cfg.id}`;
+        // "Setiap buka aplikasi" = sekali per sesi browser, bukan setiap pindah halaman
+        if (!cfg.preview && !cfg.ack && cfg.frequency === 'session' && sessionStorage.getItem(key)) return;
+        setTimeout(() => {
+            this.open = true;
+            document.documentElement.style.overflow = 'hidden';
+            try { sessionStorage.setItem(key, '1'); } catch {}
+            if (!cfg.preview) this.post(cfg.seenUrl);
+            this.timer = setInterval(() => { if (this.left > 0) this.left--; else clearInterval(this.timer); }, 1000);
+        }, 700);
+    },
+    post(url, body = {}) {
+        const token = document.querySelector('meta[name=csrf-token]')?.content;
+        return fetch(url, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': token }, body: JSON.stringify(body) }).catch(() => {});
+    },
+    tryClose() {
+        if (this.left > 0 || cfg.ack) return;
+        this.close('close');
+    },
+    close(action = 'close', hide = true) {
+        if (this.left > 0 && action !== 'close') return;
+        if (!cfg.preview) this.post(cfg.closeUrl, { action });
+        if (hide) { this.open = false; document.documentElement.style.overflow = ''; }
+    },
+}));
+
 /* ---------- Admin: palet perintah (Ctrl+K) ---------- */
 Alpine.data('adminPalette', (entries = [], searches = []) => ({
     open: false,

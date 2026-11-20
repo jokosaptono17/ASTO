@@ -22,10 +22,11 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
             @foreach ($campaigns as $c)
                 <article class="a-card flex flex-col overflow-hidden">
-                    <a href="{{ route('admin.campaigns.edit', $c) }}" class="relative block bg-ridge {{ $c->format === 'banner' ? 'aspect-[2/1]' : 'aspect-[4/5]' }}">
+                    <a href="{{ route('admin.campaigns.edit', $c) }}" class="relative block bg-ridge {{ ['banner' => 'aspect-[2/1]', 'popup' => 'aspect-[3/4]'][$c->format] ?? 'aspect-[4/5]' }}">
                         <img src="{{ $c->imageUrl() }}" alt="" class="h-full w-full object-cover {{ $c->status() !== 'tayang' ? 'opacity-50 grayscale' : '' }}" loading="lazy">
                         <span class="chip-{{ $c->status() }} absolute top-2 left-2 backdrop-blur">{{ ucfirst($c->status()) }}</span>
                         @if ($c->format === 'banner') <span class="chip absolute top-2 right-2 bg-black/60 text-fog">Banner</span> @endif
+                        @if ($c->isPopup()) <span class="chip absolute top-2 right-2 {{ $c->popup_ack ? 'bg-hivis text-[#1a1203]' : 'bg-neon text-[#04170d]' }}"><i class="ri-notification-badge-line"></i> Pop-up{{ $c->popup_ack ? ' · wajib baca' : '' }}</span> @endif
                     </a>
                     <div class="flex grow flex-col p-3">
                         <a href="{{ route('admin.campaigns.edit', $c) }}" class="line-clamp-2 text-sm font-semibold hover:text-neon">{{ $c->title }}</a>
@@ -33,7 +34,7 @@
                             {{ $c->starts_at?->locale('id')->translatedFormat('j M') ?? 'Sekarang' }} – {{ $c->ends_at?->locale('id')->translatedFormat('j M Y') ?? 'tanpa batas' }}
                         </p>
                         <div class="mt-auto flex items-center gap-1 pt-3">
-                            <span class="grow text-xs text-mist"><i class="ri-cursor-line"></i> {{ number_format($c->clicks, 0, ',', '.') }} klik</span>
+                            <span class="grow text-xs text-mist"><i class="ri-cursor-line"></i> {{ number_format($c->clicks, 0, ',', '.') }} klik @if ($c->isPopup()) · <i class="ri-eye-line"></i> {{ $c->views_count }} lihat @if ($c->popup_ack) · <i class="ri-checkbox-circle-line"></i> {{ $c->ack_count }} baca @endif @endif</span>
                             <form method="POST" action="{{ route('admin.campaigns.toggle', $c) }}">@csrf @method('PATCH')
                                 <button class="icon-btn" title="{{ $c->is_active ? 'Nonaktifkan' : 'Aktifkan' }}" aria-label="{{ $c->is_active ? 'Nonaktifkan' : 'Aktifkan' }}"><i class="{{ $c->is_active ? 'ri-eye-off-line' : 'ri-eye-line' }} text-lg"></i></button>
                             </form>
