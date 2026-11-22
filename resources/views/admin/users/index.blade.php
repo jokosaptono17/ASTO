@@ -5,30 +5,41 @@
     </x-slot:actions>
 
     <div class="grid gap-5 xl:grid-cols-[1fr_330px]">
-        <div class="min-w-0 space-y-4">
+        <div class="min-w-0 space-y-4" x-data="userSearch(@js(route('admin.users.index')))">
             {{-- Ringkasan status --}}
             @php
                 $tabs = ['' => ['Semua', $counts['all']], 'aktif' => ['Sudah aktivasi', $counts['activated']], 'belum' => ['Belum aktivasi', $counts['pending']], 'nonaktif' => ['Nonaktif', $counts['inactive']]];
             @endphp
             <div class="flex flex-wrap gap-2">
                 @foreach ($tabs as $key => [$label, $n])
-                    <a href="{{ request()->fullUrlWithQuery(['status' => $key ?: null, 'page' => null]) }}"
+                    <a href="{{ request()->fullUrlWithQuery(['status' => $key ?: null, 'page' => null]) }}" data-status="{{ $key }}"
                        class="rounded-full px-4 py-1.5 text-sm font-semibold {{ request('status', '') === $key ? 'bg-neon text-[#04170d]' : 'bg-white/[0.05] text-fog hover:bg-white/10' }}">{{ $label }} <span class="opacity-70">{{ $n }}</span></a>
                 @endforeach
             </div>
 
-            <form class="flex gap-2">
+            <form class="flex gap-2" x-ref="form" @submit.prevent="run(0)" role="search">
                 @if (request('status')) <input type="hidden" name="status" value="{{ request('status') }}"> @endif
                 <div class="relative grow">
-                    <i class="ri-search-line pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-lg text-mist"></i>
-                    <input name="q" value="{{ request('q') }}" placeholder="Cari NRP, nama, atau departemen" class="field !py-2.5 pl-10">
+                    <i class="ri-search-line pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-lg text-mist" x-show="!busy"></i>
+                    <i class="ri-loader-4-line pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 animate-spin text-lg text-neon" x-show="busy" x-cloak></i>
+                    <input type="search" name="q" value="{{ request('q') }}" x-ref="q" @input="run()" @keydown.escape="if ($el.value) { $el.value = ''; run(0) }"
+                           placeholder="Ketik NRP, nama, departemen, atau jabatan" autocomplete="off" aria-label="Cari pengguna" class="field !py-2.5 pr-10 pl-10 [&::-webkit-search-cancel-button]:appearance-none">
+                    <button type="button" x-show="$refs.q.value" x-cloak @click="$refs.q.value = ''; run(0); $refs.q.focus()" class="absolute top-1/2 right-2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full text-mist hover:bg-white/10 hover:text-white" aria-label="Hapus pencarian"><i class="ri-close-line text-lg"></i></button>
                 </div>
-                <select name="role" class="field !w-auto !py-2.5" onchange="this.form.submit()">
+                <select name="role" class="field !w-auto !py-2.5" @change="run(0)" aria-label="Saring peran">
                     <option value="">Semua peran</option>
                     @foreach (\App\Models\User::ROLES as $k => $l) <option value="{{ $k }}" @selected(request('role') === $k)>{{ $l }}</option> @endforeach
                 </select>
             </form>
 
+            @fragment('hasil')
+            <div id="hasil-pengguna" class="space-y-4">
+            @if (request('q') || request('role'))
+                <p class="text-sm text-mist" aria-live="polite">
+                    <span class="font-semibold text-white">{{ $users->total() }}</span> pengguna cocok
+                    @if (request('q')) untuk “<span class="text-neon">{{ request('q') }}</span>”@endif
+                </p>
+            @endif
             <div class="a-card overflow-x-auto">
                 <table class="w-full min-w-[640px]">
                     <thead><tr><th class="a-th">Karyawan</th><th class="a-th">Departemen</th><th class="a-th">Status</th><th class="a-th">Masuk terakhir</th><th class="a-th"></th></tr></thead>
@@ -61,12 +72,20 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="a-td py-10 text-center text-mist">Tidak ada pengguna yang cocok. Impor data karyawan dari Excel di panel samping.</td></tr>
+                            <tr><td colspan="5" class="a-td py-10 text-center text-mist">
+                                @if (request('q'))
+                                    Tidak ada pengguna dengan NRP, nama, atau departemen “{{ request('q') }}”. Coba kata lain, misalnya sebagian NRP.
+                                @else
+                                    Tidak ada pengguna yang cocok. Impor data karyawan dari Excel di panel samping.
+                                @endif
+                            </td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
             {{ $users->links('admin.pagination') }}
+            </div>
+            @endfragment
         </div>
 
         {{-- Impor Excel --}}
@@ -101,4 +120,43 @@
             @endif
         </aside>
     </div>
+
+    <script>
+        // Pencarian langsung: hasil berganti saat mengetik (jeda 250 ms), URL ikut diperbarui.
+        function userSearch(url) {
+            let timer, ctrl;
+            return {
+                busy: false,
+                run(delay = 250) {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => this.fetch(), delay);
+                },
+                async fetch() {
+                    const params = new URLSearchParams(new FormData(this.$refs.form));
+                    [...params.keys()].forEach((k) => params.get(k) === '' && params.delete(k));
+                    const target = url + (params.toString() ? '?' + params : '');
+                    ctrl?.abort();
+                    ctrl = new AbortController();
+                    this.busy = true;
+                    try {
+                        const res = await fetch(target, { headers: { 'X-Fragment': 'hasil', 'X-Requested-With': 'XMLHttpRequest' }, signal: ctrl.signal });
+                        if (!res.ok) throw new Error(res.status);
+                        document.getElementById('hasil-pengguna').outerHTML = await res.text();
+                        history.replaceState(null, '', target);
+                        // Tab status ikut membawa kata kunci & peran
+                        document.querySelectorAll('a[data-status]').forEach((a) => {
+                            const p = new URLSearchParams(params);
+                            p.delete('page');
+                            a.dataset.status ? p.set('status', a.dataset.status) : p.delete('status');
+                            a.href = url + (p.toString() ? '?' + p : '');
+                        });
+                    } catch (e) {
+                        if (e.name !== 'AbortError') location.href = target; // cadangan: muat ulang biasa
+                    } finally {
+                        this.busy = false;
+                    }
+                },
+            };
+        }
+    </script>
 </x-layouts.admin>
