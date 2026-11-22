@@ -16,10 +16,10 @@ use Throwable;
 
 class UserController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|string
     {
         $query = User::query()
-            ->when($request->query('q'), fn ($q, $s) => $q->where(fn ($w) => $w->where('nrp', 'like', "%$s%")->orWhere('name', 'like', "%$s%")->orWhere('department', 'like', "%$s%")))
+            ->when(trim((string) $request->query('q')), fn ($q, $s) => $this->search($q, $s))
             ->when($request->query('role'), fn ($q, $r) => $q->where('role', $r))
             ->when($request->query('status'), fn ($q, $s) => match ($s) {
                 'aktif' => $q->where('is_active', true)->whereNotNull('pin'),
@@ -28,7 +28,7 @@ class UserController extends Controller
                 default => $q,
             });
 
-        return view('admin.users.index', [
+        $view = view('admin.users.index', [
             'users' => $query->orderBy('name')->paginate(25)->withQueryString(),
             'counts' => [
                 'all' => User::count(),
@@ -38,6 +38,9 @@ class UserController extends Controller
             ],
             'departments' => User::whereNotNull('department')->distinct()->orderBy('department')->pluck('department'),
         ]);
+
+        // Pencarian langsung (ketik → hasil berganti tanpa muat ulang halaman)
+        return $request->header('X-Fragment') === 'hasil' ? $view->fragment('hasil') : $view;
     }
 
     public function create(): View
@@ -152,5 +155,26 @@ class UserController extends Controller
         ], ['nrp.unique' => 'NRP ini sudah terdaftar.'], ['name' => 'nama', 'role' => 'peran']);
 
         return $data + ['is_active' => $request->boolean('is_active')];
+    }
+
+    /**
+     * Cari per kata (urutan bebas): "joko kt16", "saptono joko", "hauling mekanik".
+     * Tiap kata harus cocok di salah satu kolom; NRP juga dicocokkan tanpa spasi.
+     */
+    private function search($query, string $term)
+    {
+        $words = array_slice(preg_split('/\s+/', mb_strtolower($term), -1, PREG_SPLIT_NO_EMPTY), 0, 6);
+
+        return $query->where(function ($all) use ($words, $term) {
+            $compact = str_replace(' ', '', $term);
+            $all->where('nrp', 'like', '%'.$compact.'%')
+                ->orWhere(function ($each) use ($words) {
+                    foreach ($words as $w) {
+                        $like = '%'.addcslashes($w, '%_\\').'%';
+                        $each->where(fn ($col) => $col->where('name', 'like', $like)->orWhere('nrp', 'like', $like)
+                            ->orWhere('department', 'like', $like)->orWhere('position', 'like', $like));
+                    }
+                });
+        });
     }
 }
