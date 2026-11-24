@@ -11,7 +11,7 @@ Dokumen serah-terima lengkap (riwayat, keputusan, modul, skema, deploy, jebakan)
 - Ujian Event (`docs/ujian.md`): bank soal (`QuestionSet`/`Question`, impor Excel `QuestionImporter` termasuk sheet lama) → `Exam` (kode satu per event, peserta ditunjuk `exam_participants`) → `ExamAttempt`/`ExamAnswer`. Semua lewat `Services\Exams\ExamService`: kunci jawaban tak pernah ke HP, nilai & batas waktu di server, autosave + antrean offline. Pemberitahuan di beranda (sekali per login, didahulukan dari pop-up kampanye). Gate `manage-exams` (admin, she).
 - Model aplikasi = `AppLink` (tabel `apps`). Buka aplikasi lewat route `apps.go` agar kunjungan tercatat.
 - Gambar diolah `ImageService` (GD → WebP) ke disk `public`.
-- Mentari: `MentariController` → `MentariGuide` (+ `PeopleDesk` untuk kartu karyawan/statistik/training) menjawab dari data asli; hanya obrolan bebas ke `MENTARI_ENDPOINT`. Kontrak & aturan lihat data di `docs/mentari.md`.
+- Mentari: `MentariController` → `MentariBrain` (bahasa `Language` → ingatan `Memory` → data asli `MentariGuide` + `PeopleDesk`/`PointsDesk`/`AttendanceDesk`/`ExamDesk` → pengetahuan `KnowledgeBase` BM25 → AI gratis `Ai\Agent` Groq/Gemini/OpenRouter dengan tool calling → `MENTARI_ENDPOINT` → cadangan). Kuota & privasi di `Ai\Providers` (hanya penyedia `personal` menerima data karyawan). Log `mentari_logs` 90 hari. Lihat `docs/mentari.md`.
 - Data LMS dibaca lewat koneksi read-only `lms`/`sertifikat` (`LmsDirectory`), opsional — semua jalur harus tetap jalan bila tidak diatur.
 - Aset di-build lalu di-commit (`public/build`), karena VPS tidak memakai Node. Setelah ubah CSS/JS/Blade: `npm run build`.
 - Tes: `php artisan test` (SQLite memori). Deploy: `docs/DEPLOY.md`.

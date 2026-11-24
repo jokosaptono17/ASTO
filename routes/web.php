@@ -36,6 +36,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/sso/mekanikpintar/batal', [\App\Http\Controllers\SsoController::class, 'cancel'])->name('sso.mekanikpintar.cancel');
     Route::post('/sso/mekanikpintar/ganti-akun', [\App\Http\Controllers\SsoController::class, 'switchAccount'])->name('sso.mekanikpintar.switch');
 
+    Route::post('/mentari/umpan-balik', [MentariController::class, 'feedback'])->middleware('throttle:60,1')->name('mentari.feedback');
+
     Route::get('/', HomeController::class)->name('home');
     Route::get('/aplikasi', [AppController::class, 'index'])->name('apps.index');
     Route::get('/buka/{app}', [AppController::class, 'go'])->name('apps.go');
@@ -205,6 +207,8 @@ Route::middleware('auth')->group(function () {
                 ->parameters(['pengguna' => 'user'])->names('users');
 
             Route::post('mentari/uji', [Admin\MentariFaqController::class, 'test'])->name('mentari.test');
+            Route::post('mentari/ai', [Admin\MentariFaqController::class, 'settings'])->name('mentari.settings');
+            Route::post('mentari/pertanyaan/beres', [Admin\MentariFaqController::class, 'resolve'])->name('mentari.resolve');
             Route::resource('mentari', Admin\MentariFaqController::class)->only(['index', 'store', 'update', 'destroy'])
                 ->parameters(['mentari' => 'faq'])->names('mentari');
 

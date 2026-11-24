@@ -21,8 +21,8 @@ class MentariGuide
 {
     public const CHIPS = [
         'guest' => ['Lupa PIN', 'NRP saya belum terdaftar', 'Cara pasang aplikasi', 'Apa itu AstoOne?'],
-        'user' => ['Poin saya', 'Absensi saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?'],
-        'gl' => ['Siapa yang belum absen?', 'Mekanik asuh saya', 'Absensi saya', 'Training saya', 'Info terbaru'],
+        'user' => ['Poin saya', 'Ujian saya', 'Absensi saya', 'Training saya', 'Info terbaru', 'Apa itu Monata?'],
+        'gl' => ['Siapa yang belum absen?', 'Mekanik asuh saya', 'Ujian saya', 'Absensi saya', 'Training saya', 'Info terbaru'],
         'admin' => ['Statistik portal', 'Siapa yang belum absen?', 'Siapa yang belum aktivasi?', 'Aplikasi yang gangguan', 'Kampanye paling banyak diklik'],
     ];
 
@@ -31,7 +31,16 @@ class MentariGuide
     /** Intent yang boleh diserahkan ke AI bila MENTARI_ENDPOINT diatur. */
     public const AI_INTENTS = ['fallback', 'greeting', 'identity', 'thanks'];
 
-    public function __construct(private PeopleDesk $people, private AttendanceDesk $attendance, private PointsDesk $points) {}
+    /** Aplikasi yang hanya tersinggung samar — ditawarkan di jawaban cadangan. */
+    private array $suggestion = [];
+
+    public function __construct(
+        private PeopleDesk $people,
+        private AttendanceDesk $attendance,
+        private PointsDesk $points,
+        private ExamDesk $exams,
+        private Language $lang,
+    ) {}
 
     public static function chipsFor(?User $user): array
     {
@@ -45,8 +54,11 @@ class MentariGuide
 
     public function answer(string $message, array $context, ?User $viewer = null): array
     {
-        $q = Str::lower(trim(preg_replace('/\s+/', ' ', $message)));
-        $q = rtrim($q, " ?!.");
+        // Bahasa chat & salah ketik dirapikan dulu ("brp poin sy" → "berapa poin saya").
+        // Nama orang memakai versi tanpa koreksi ejaan ($lite).
+        $q = $this->lang->normalize($message);
+        $lite = $this->lang->lite($message);
+        $this->suggestion = [];
 
         if (! $viewer) {
             foreach (['account', 'install', 'faq', 'identity', 'greeting'] as $step) {
@@ -61,6 +73,7 @@ class MentariGuide
         $steps = [
             'appKnowledge' => fn () => $this->appKnowledge($q),
             'points' => fn () => $this->points->answer($q, $viewer),
+            'exams' => fn () => $this->exams->answer($q, $viewer),
             'self' => fn () => $this->people->self($q, $viewer),
             'attendance' => fn () => $this->attendance->answer($q, $viewer),
             'nrp' => fn () => $this->people->byNrp($message, $q, $viewer),
@@ -71,7 +84,7 @@ class MentariGuide
             'campaigns' => fn () => $this->campaigns($q, $context),
             'faq' => fn () => $this->faq($q),
             'findApp' => fn () => $this->findApp($q, $context),
-            'name' => fn () => $this->people->byName($q, $viewer),
+            'name' => fn () => $this->people->byName($lite, $viewer),
             'identity' => fn () => $this->identity($q),
             'greeting' => fn () => $this->greeting($q, $context),
             'thanks' => fn () => $this->thanks($q),
@@ -88,6 +101,69 @@ class MentariGuide
     private function finish(array $answer, string $intent): array
     {
         return ['reply' => $answer['reply'], 'actions' => $answer['actions'] ?? [], 'cards' => $answer['cards'] ?? [], 'intent' => $intent];
+    }
+
+    /* ------------------------------------------------ alat untuk AI */
+
+    /**
+     * Pintu data untuk AI (tool calling). Semua aturan lihat data tetap berlaku karena memakai bagian otak yang sama.
+     * Mengembalikan jawaban berformat sama dengan answer(), atau null bila tidak ada hasil.
+     */
+    public function tool(string $name, array $args, User $viewer, array $context): ?array
+    {
+        $arg = trim((string) ($args['kata_kunci'] ?? $args['nama'] ?? $args['nrp_atau_nama'] ?? $args['nrp'] ?? $args['pertanyaan'] ?? ''));
+
+        return match ($name) {
+            'cari_aplikasi' => $arg !== '' ? $this->findApp($this->lang->normalize($arg), $context) : null,
+            'info_aplikasi' => $this->appInfo($arg),
+            'pengumuman_terbaru' => $this->announcements('info terbaru', $context),
+            'katalog_hadiah' => $this->catalog(),
+            'poin_saya' => $this->points->answer('poin saya', $viewer),
+            'absensi_saya' => $this->attendance->answer('absensi saya', $viewer),
+            'absensi_dibuka' => $this->attendance->answer('absen sekarang', $viewer),
+            'ujian_saya' => $this->exams->answer('ujian saya', $viewer),
+            'nilai_ujian_saya' => $this->exams->answer('nilai ujian saya', $viewer),
+            'data_karyawan' => $arg === '' ? null : (preg_match(PeopleDesk::NRP_PATTERN, Str::upper($arg))
+                ? $this->people->byNrp($arg, Str::lower($arg), $viewer)
+                : $this->people->byName('siapa '.$this->lang->lite($arg), $viewer)),
+            'riwayat_training' => $this->trainingFor($arg, $viewer),
+            'statistik_portal' => $viewer->isAdmin() ? $this->people->stats('statistik portal', $viewer) : null,
+            default => null,
+        };
+    }
+
+    private function appInfo(string $name): ?array
+    {
+        $app = $name !== '' ? $this->matchApp(Str::lower($name)) : null;
+        if (! $app) {
+            return null;
+        }
+        $text = ($app->description ?: ($app->tagline ?: "{$app->name} adalah aplikasi Plant ASTO."))
+            .($app->category ? "\nKategori: {$app->category->name}." : '')
+            .($app->howto ? "\nCara pakai: {$app->howto}" : '')
+            .($app->pic_name ? "\nPIC: {$app->pic_name}." : '')
+            .($app->health_check && $app->health_status === 'down' ? "\nStatus: sedang tidak merespons." : '');
+
+        return $this->reply("{$app->name}: {$text}", [['label' => 'Buka '.$app->name, 'href' => route('apps.go', $app)]]);
+    }
+
+    private function catalog(): array
+    {
+        $rewards = \App\Models\Reward::available()->limit(10)->get();
+
+        return $this->reply($rewards->isEmpty() ? 'Katalog hadiah belum diisi tim admin.' : "Katalog hadiah Poin HEBAT:\n".$rewards
+            ->map(fn ($r) => '• '.$r->name.' — '.number_format($r->cost, 0, ',', '.').' poin'.($r->stock !== null ? ' (stok '.$r->stock.')' : ''))->implode("\n"),
+            [['label' => 'Katalog hadiah', 'href' => route('points.rewards')]]);
+    }
+
+    private function trainingFor(string $arg, User $viewer): array
+    {
+        $target = $viewer;
+        if ($arg !== '' && preg_match(PeopleDesk::NRP_PATTERN, Str::upper($arg), $m)) {
+            $target = User::where('nrp', $m[1])->first() ?? $viewer;
+        }
+
+        return $this->people->training($target, $viewer);
     }
 
     /* ------------------------------------------------ pengetahuan aplikasi */
@@ -261,6 +337,7 @@ class MentariGuide
             $name = Str::lower($app['name']);
             $haystack = Str::lower($app['name'].' '.$app['tagline'].' '.$app['category']);
             $score = 0;
+            $hits = 0;
             foreach ($tokens as $t) {
                 if (preg_match('/(^|\s)'.preg_quote($t, '/').'/u', $name)) {
                     $score += 4; // awal kata pada nama: "shop" → Shop Manual
@@ -268,13 +345,24 @@ class MentariGuide
                     $score += 2; // di tengah kata: "shop" → Workshop
                 } elseif (str_contains($haystack, $t)) {
                     $score += 1;
+                } else {
+                    continue;
                 }
+                $hits++;
             }
 
-            return $app + ['score' => $score];
+            return $app + ['score' => $score, 'hits' => $hits];
         })->filter(fn ($a) => $a['score'] > 0)->sortByDesc('score')->values();
 
         if ($scored->isEmpty()) {
+            return null;
+        }
+        // Kalimat panjang yang hanya menyinggung nama aplikasi ("torsi baut roda scania") bukan permintaan membuka
+        // aplikasi: simpan sebagai saran untuk jawaban cadangan, biarkan pengetahuan/AI menjawab dulu.
+        $seeking = (bool) preg_match('/\b(buka|bukakan|cari|carikan|link|tautan|aplikasi|web|alamat|mana)\b/u', $q);
+        if (! $seeking && $scored->first()['hits'] / $tokens->count() < 0.5) {
+            $this->suggestion = $scored->take(2)->map(fn ($a) => ['label' => 'Buka '.$a['name'], 'href' => $a['url']])->all();
+
             return null;
         }
         // Hanya tampilkan yang skornya mendekati kecocokan terbaik
@@ -330,6 +418,13 @@ class MentariGuide
 
     private function fallback(string $message, bool $guest): array
     {
+        if (! $guest && $this->suggestion) {
+            return $this->reply('Saya belum yakin jawabannya. Mungkin aplikasi ini membantu — atau tanyakan langsung ke admin.', [
+                ...$this->suggestion,
+                $this->wa('Halo Admin AstoOne, saya butuh bantuan: '.Str::limit($message, 300)),
+            ]);
+        }
+
         return $this->reply($guest
             ? 'Maaf, saya belum bisa menjawab itu. Untuk kendala masuk akun, admin siap membantu lewat WhatsApp.'
             : 'Maaf, saya belum menemukan jawabannya. Coba sebut nama aplikasinya, atau tanyakan langsung ke admin.', [

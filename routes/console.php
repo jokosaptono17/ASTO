@@ -9,4 +9,6 @@ Schedule::command('astoone:check-apps')->everyTenMinutes()->withoutOverlapping()
 Schedule::call(function () {
     \App\Models\AppVisit::where('created_at', '<', now()->subYear())->delete();
     \App\Models\CampaignClick::where('created_at', '<', now()->subYear())->delete();
+    // Jejak pertanyaan Mentari disimpan 90 hari saja
+    \App\Models\MentariLog::where('created_at', '<', now()->subDays(90))->delete();
 })->weekly()->name('prune-logs');

@@ -62,6 +62,7 @@ document.addEventListener('alpine:init', () => {
         open: false,
         input: '',
         typing: false,
+        thinking: false,
         bubble: '',
         tip: 0,
         messages: [],
@@ -123,21 +124,37 @@ document.addEventListener('alpine:init', () => {
 
             let answer = null;
             const started = performance.now();
+            // Pertanyaan yang butuh AI bisa beberapa detik — tampilkan "sedang berpikir"
+            const thinkTimer = setTimeout(() => { this.thinking = true; this.scroll(); }, 1200);
             try {
                 const history = this.messages.slice(-9, -1).map((m) => ({ role: m.role, content: m.text }));
                 const data = await window.postJson(config.url, { message, history, page: config.page });
-                if (data.reply) answer = { text: data.reply, actions: data.actions || [], cards: data.cards || [] };
+                if (data.reply) {
+                    answer = {
+                        text: data.reply, actions: data.actions || [], cards: data.cards || [],
+                        source: data.source || null, provider: data.provider_label || null, log_id: data.log_id || null, rated: null,
+                    };
+                }
             } catch { /* jaringan putus */ }
+            clearTimeout(thinkTimer);
 
             answer ??= offlineAnswer(message, config.whatsapp);
             const wait = 450 - (performance.now() - started);
             if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
 
             this.typing = false;
+            this.thinking = false;
             this.messages.push({ role: 'assistant', ...answer });
             this.persist();
             this.talk(Math.min(4000, 400 + answer.text.length * 18));
             this.scroll();
+        },
+        /* 👍 / 👎 untuk satu jawaban — membantu admin memperbaiki Mentari */
+        async rate(m, helpful) {
+            if (!m.log_id || m.rated !== null && m.rated !== undefined) return;
+            m.rated = helpful;
+            this.persist();
+            try { await window.postJson(config.feedbackUrl, { log_id: m.log_id, helpful }); } catch { /* abaikan */ }
         },
     }));
 });
