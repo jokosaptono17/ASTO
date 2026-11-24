@@ -27,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('admin', fn (User $user) => $user->isAdmin());
         Gate::define('host-attendance', fn (User $user) => $user->canHostAttendance());
         Gate::define('manage-points', fn (User $user) => $user->canManageContent());
+        Gate::define('manage-exams', fn (User $user) => $user->canManageContent());
 
         // Data yang dipakai semua tampilan
         View::composer('*', fn ($view) => $view->with('siteName', Setting::get('site_name')));

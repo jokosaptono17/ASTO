@@ -77,6 +77,9 @@
 
         <div class="lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-x-8 lg:px-8 lg:pt-10">
         <div class="min-w-0">
+        {{-- Ujian event yang ditunjuk --}}
+        @include('portal.exams._home-card')
+
         {{-- Absensi hari ini --}}
         @include('portal.attendance._home-card')
 
@@ -240,5 +243,6 @@
             </div>
         </template>
     </div>
+    @include('portal.exams._notice')
     @include('portal._popup')
 </x-layouts.portal>

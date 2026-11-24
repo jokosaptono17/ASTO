@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\AppController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ExamController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InfoController;
 use App\Http\Controllers\MentariController;
@@ -52,6 +53,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/absen/kode', [AttendanceController::class, 'enterCode'])->middleware('throttle:20,1')->name('attendance.code');
     Route::post('/absen/{code}', [AttendanceController::class, 'store'])->where('code', '[A-Z0-9]{8}')->name('attendance.store');
     Route::get('/absensi-saya', [AttendanceController::class, 'history'])->name('attendance.history');
+
+    // Ujian Event (Best Mekanik, Best GL, pre/post test)
+    Route::get('/ujian', [ExamController::class, 'index'])->name('exams.index');
+    Route::post('/ujian/kode', [ExamController::class, 'enterCode'])->middleware('throttle:12,1')->name('exams.code');
+    Route::get('/ujian/{exam}', [ExamController::class, 'show'])->whereNumber('exam')->name('exams.show');
+    Route::post('/ujian/{exam}/mulai', [ExamController::class, 'start'])->whereNumber('exam')->middleware('throttle:12,1')->name('exams.start');
+    Route::get('/ujian/sesi/{attempt}', [ExamController::class, 'room'])->name('exams.room');
+    Route::post('/ujian/sesi/{attempt}/jawab', [ExamController::class, 'answer'])->middleware('throttle:300,1')->name('exams.answer');
+    Route::post('/ujian/sesi/{attempt}/sinkron', [ExamController::class, 'sync'])->middleware('throttle:60,1')->name('exams.sync');
+    Route::post('/ujian/sesi/{attempt}/pelanggaran', [ExamController::class, 'violation'])->middleware('throttle:60,1')->name('exams.violation');
+    Route::post('/ujian/sesi/{attempt}/kumpulkan', [ExamController::class, 'submit'])->name('exams.submit');
+    Route::get('/ujian/hasil/{attempt}', [ExamController::class, 'result'])->name('exams.result');
 
     Route::get('/profil', [ProfileController::class, 'show'])->name('profile');
     Route::put('/profil/pin', [ProfileController::class, 'updatePin'])->name('profile.pin');
@@ -122,6 +135,44 @@ Route::middleware('auth')->group(function () {
         Route::post('penyesuaian', [Admin\Points\LedgerController::class, 'adjust'])->middleware('can:admin')->name('adjust');
         Route::get('aturan', [Admin\Points\LedgerController::class, 'rules'])->name('rules');
         Route::put('aturan', [Admin\Points\LedgerController::class, 'saveRules'])->name('rules.update');
+    });
+
+    // Ujian Event — Administrator & Admin SHE
+    Route::prefix('admin/ujian')->name('admin.exams.')->middleware('can:manage-exams')->group(function () {
+        $c = Admin\Exams\ExamController::class;
+        $b = Admin\Exams\BankController::class;
+        Route::get('bank', [$b, 'index'])->name('bank');
+        Route::post('bank', [$b, 'storeSet'])->name('bank.store');
+        Route::get('bank/impor', [$b, 'importForm'])->name('bank.import');
+        Route::post('bank/impor', [$b, 'import'])->name('bank.import.store');
+        Route::get('bank/template', [$b, 'template'])->name('bank.template');
+        Route::get('bank/soal/{question}', [$b, 'edit'])->name('bank.edit');
+        Route::put('bank/soal/{question}', [$b, 'update'])->name('bank.update');
+        Route::patch('bank/soal/{question}/aktif', [$b, 'toggle'])->name('bank.toggle');
+        Route::delete('bank/soal/{question}', [$b, 'destroy'])->name('bank.destroy');
+        Route::get('bank/{set}', [$b, 'set'])->name('bank.set');
+        Route::put('bank/{set}', [$b, 'updateSet'])->name('bank.update-set');
+        Route::delete('bank/{set}', [$b, 'destroySet'])->name('bank.destroy-set');
+        Route::get('bank/{set}/baru', [$b, 'create'])->name('bank.create');
+        Route::post('bank/{set}/soal', [$b, 'store'])->name('bank.question.store');
+        Route::get('bank/{set}/ekspor', [$b, 'export'])->name('bank.export');
+
+        Route::get('cari-karyawan', [$c, 'people'])->name('people');
+        Route::get('/', [$c, 'index'])->name('index');
+        Route::get('baru', [$c, 'create'])->name('create');
+        Route::post('/', [$c, 'store'])->name('store');
+        Route::get('{exam}', [$c, 'show'])->whereNumber('exam')->name('show');
+        Route::get('{exam}/ubah', [$c, 'edit'])->whereNumber('exam')->name('edit');
+        Route::put('{exam}', [$c, 'update'])->whereNumber('exam')->name('update');
+        Route::delete('{exam}', [$c, 'destroy'])->whereNumber('exam')->name('destroy');
+        Route::post('{exam}/terbit', [$c, 'publish'])->whereNumber('exam')->name('publish');
+        Route::post('{exam}/buka-tutup', [$c, 'toggleOpen'])->whereNumber('exam')->name('toggle');
+        Route::get('{exam}/feed', [$c, 'feed'])->whereNumber('exam')->name('feed');
+        Route::get('{exam}/layar', [$c, 'screen'])->whereNumber('exam')->name('screen');
+        Route::get('{exam}/ekspor', [$c, 'export'])->whereNumber('exam')->name('export');
+        Route::post('{exam}/hitung-ulang', [$c, 'regrade'])->whereNumber('exam')->name('regrade');
+        Route::get('{exam}/peserta/{attempt}', [$c, 'attempt'])->whereNumber('exam')->name('attempt');
+        Route::post('{exam}/peserta/{attempt}', [$c, 'attemptAction'])->whereNumber('exam')->name('attempt.action');
     });
 
     Route::prefix('admin')->name('admin.')->middleware('can:manage-content')->group(function () {

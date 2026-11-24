@@ -24,6 +24,10 @@
             ['admin.points.rewards.index', 'ri-gift-2-line', 'Katalog hadiah', 'manage-points', 'admin.points.rewards.*'],
             ['admin.points.ledger', 'ri-file-list-3-line', 'Riwayat & aturan', 'manage-points', ['admin.points.ledger*', 'admin.points.rules*']],
         ],
+        'Ujian Event' => [
+            ['admin.exams.index', 'ri-medal-2-line', 'Event ujian', 'manage-exams', ['admin.exams.index', 'admin.exams.show', 'admin.exams.create', 'admin.exams.edit', 'admin.exams.attempt']],
+            ['admin.exams.bank', 'ri-question-answer-line', 'Bank soal', 'manage-exams', 'admin.exams.bank*'],
+        ],
         'Konten' => [
             ['admin.campaigns.index', 'ri-image-2-line', 'Kampanye', 'manage-content', 'admin.campaigns.*'],
             ['admin.announcements.index', 'ri-megaphone-line', 'Pengumuman', 'manage-content', 'admin.announcements.*'],
@@ -47,6 +51,8 @@
             ['Tambah aplikasi', 'admin.apps.create', 'ri-apps-line', 'admin', 'Aksi cepat'],
             ['Beri poin untuk event', 'admin.points.grants.create', 'ri-trophy-line', 'manage-points', 'Aksi cepat'],
             ['Tambah hadiah', 'admin.points.rewards.create', 'ri-gift-2-line', 'manage-points', 'Aksi cepat'],
+            ['Buat ujian event', 'admin.exams.create', 'ri-medal-2-line', 'manage-exams', 'Aksi cepat'],
+            ['Impor soal dari Excel', 'admin.exams.bank.import', 'ri-file-excel-2-line', 'manage-exams', 'Aksi cepat'],
             ['Aturan poin otomatis', 'admin.points.rules', 'ri-settings-3-line', 'manage-points', 'Aksi cepat'],
             ['Buka portal', 'home', 'ri-home-5-line', 'host-attendance', 'Aksi cepat'],
         ])
@@ -55,11 +61,13 @@
     $search = array_filter([
         $user->can('admin') ? ['label' => 'Cari pengguna', 'href' => route('admin.users.index'), 'icon' => 'ri-user-search-line'] : null,
         $user->can('admin') ? ['label' => 'Cari aplikasi', 'href' => route('admin.apps.index'), 'icon' => 'ri-search-eye-line'] : null,
+        $user->can('manage-exams') ? ['label' => 'Cari di bank soal', 'href' => route('admin.exams.bank'), 'icon' => 'ri-question-answer-line'] : null,
         $user->can('manage-points') ? ['label' => 'Cari kupon / riwayat poin', 'href' => route('admin.points.ledger'), 'icon' => 'ri-coin-line'] : null,
         $user->can('host-attendance') ? ['label' => 'Cari di rekap absensi', 'href' => route('admin.attendance.recap'), 'icon' => 'ri-file-search-line'] : null,
     ]);
     $pendingCoupons = $user->can('manage-points') ? \App\Models\Redemption::where('status', 'pending')->count() : 0;
     $pendingGrants = $user->can('manage-points') ? \App\Models\PointGrant::where('status', 'pending')->count() : 0;
+    $liveExams = $user->can('manage-exams') ? \App\Models\Exam::openNow()->count() : 0;
     $liveSessions = $user->can('host-attendance') ? \App\Models\AttendanceSession::openNow()->visibleTo($user)->count() : 0;
     $hero = \App\Models\Setting::hero();
 @endphp
@@ -102,6 +110,9 @@
                                 @endif
                                 @if ($route === 'admin.points.grants.index' && $pendingGrants)
                                     <span class="rounded-full bg-hivis/15 px-2 py-0.5 text-[11px] font-semibold text-hivis">{{ $pendingGrants }}</span>
+                                @endif
+                                @if ($route === 'admin.exams.index' && $liveExams)
+                                    <span class="flex items-center gap-1 rounded-full bg-hivis/15 px-2 py-0.5 text-[11px] font-semibold text-hivis"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-hivis"></span>{{ $liveExams }}</span>
                                 @endif
                                 @if ($route === 'admin.attendance.index' && $liveSessions)
                                     <span class="flex items-center gap-1 rounded-full bg-neon/15 px-2 py-0.5 text-[11px] font-semibold text-neon"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-neon"></span>{{ $liveSessions }}</span>

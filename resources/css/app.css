@@ -88,10 +88,11 @@
     .section-link { @apply inline-flex items-center gap-1 text-sm font-semibold text-neon hover:text-neon-soft; }
 
     /* Tombol */
-    .btn, .btn-neon, .btn-ghost, .btn-wa { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 text-[15px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40; }
+    .btn, .btn-neon, .btn-ghost, .btn-wa, .btn-hivis { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 text-[15px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40; }
     .btn-neon { @apply bg-neon text-[#04170d] hover:bg-neon-soft active:scale-[.98]; box-shadow: 0 10px 30px -10px rgb(61 255 142 / .65); }
     .btn-ghost { @apply border border-white/10 bg-white/[0.04] text-ink hover:bg-white/[0.08]; }
     .btn-wa { @apply border border-neon/30 bg-neon/10 text-neon-soft hover:bg-neon/20; }
+    .btn-hivis { @apply bg-hivis text-[#1a1203] hover:brightness-110 active:scale-[.98]; box-shadow: 0 10px 30px -10px rgb(255 194 61 / .7); }
 
     /* Input */
     .field { @apply block w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[15px] text-ink placeholder:text-mist/60 transition focus:border-neon/60 focus:bg-white/[0.06] focus:outline-none focus:ring-4 focus:ring-neon/10; }
@@ -223,3 +224,33 @@
 .confetti span { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: 0; animation: confetti 2.4s cubic-bezier(.2,.6,.4,1) var(--d) forwards; }
 @keyframes confetti { 0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0); } 100% { opacity: 0; transform: translate3d(var(--x), 105vh, 0) rotate(540deg); } }
 @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
+
+/* ---------- Ujian Event ---------- */
+.exam-medal { display: grid; place-items: center; flex-shrink: 0; width: 56px; height: 56px; border-radius: 18px; font-size: 30px; color: #1a1203;
+    background: radial-gradient(120% 120% at 30% 20%, #ffe29a 0%, var(--color-hivis) 45%, var(--color-hivis-deep) 100%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .55), 0 10px 26px -10px rgb(255 194 61 / .8); }
+.exam-card-glow { position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(70% 90% at 0% 0%, rgb(255 194 61 / .16), transparent 60%), radial-gradient(50% 60% at 100% 100%, rgb(61 255 142 / .08), transparent); }
+.exam-card-glow::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 35%, rgb(255 226 154 / .1) 50%, transparent 65%); animation: sweep 4.5s ease-in-out infinite; }
+
+/* Ruang ujian */
+.exam-opt { @apply relative flex w-full items-start gap-3.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 text-left transition; }
+.exam-opt:hover { @apply border-white/20 bg-white/[0.05]; }
+.exam-opt[aria-checked='true'] { @apply border-neon/70 bg-neon/[0.09]; box-shadow: 0 0 0 1px rgb(61 255 142 / .35), 0 12px 30px -16px rgb(61 255 142 / .6); }
+.exam-opt .letter { @apply grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/15 font-display text-[15px] font-bold text-fog transition; }
+.exam-opt[aria-checked='true'] .letter { @apply border-neon bg-neon text-[#04170d]; }
+.nav-cell { @apply relative grid aspect-square place-items-center rounded-xl border font-display text-[15px] font-semibold transition; }
+.nav-cell[data-s='empty'] { @apply border-white/10 bg-white/[0.03] text-mist; }
+.nav-cell[data-s='done'] { @apply border-neon/40 bg-neon/15 text-neon; }
+.nav-cell[data-s='flag'] { @apply border-hivis/50 bg-hivis/15 text-hivis; }
+.nav-cell[aria-current='true'] { box-shadow: 0 0 0 2px var(--color-pit), 0 0 0 4px var(--color-ink); }
+@keyframes q-in-r { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
+@keyframes q-in-l { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+.q-in-r { animation: q-in-r .28s var(--ease-snap) both; }
+.q-in-l { animation: q-in-l .28s var(--ease-snap) both; }
+@keyframes timer-pulse { 50% { box-shadow: 0 0 0 6px rgb(255 93 93 / 0); } 0%, 100% { box-shadow: 0 0 0 0 rgb(255 93 93 / .55); } }
+.timer-alarm { animation: timer-pulse 1s ease-out infinite; }
+.code-cell { @apply h-16 w-full rounded-2xl border border-white/15 bg-white/[0.04] text-center font-display text-[1.7rem] font-bold tracking-[.32em] text-ink uppercase placeholder:tracking-normal placeholder:text-mist/50 transition focus:border-hivis/70 focus:outline-none focus:ring-4 focus:ring-hivis/15; }
+@keyframes score-ring { from { stroke-dashoffset: var(--len); } }
+.score-ring { animation: score-ring 1.4s var(--ease-snap) both; }
+@media (prefers-reduced-motion: reduce) { .exam-card-glow::after, .q-in-r, .q-in-l, .timer-alarm, .score-ring { animation: none !important; } }

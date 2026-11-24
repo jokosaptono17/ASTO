@@ -41,6 +41,24 @@ class ImageService
         return $this->save($dst, $dir, false);
     }
 
+    /** Gambar soal/diagram: diperkecil agar muat dalam kotak, tanpa dipotong. */
+    public function storeFit(UploadedFile $file, string $dir, int $maxW = 1600, int $maxH = 1600): string
+    {
+        $src = $this->load($file);
+        [$sw, $sh] = [imagesx($src), imagesy($src)];
+        $scale = min($maxW / $sw, $maxH / $sh, 1);
+        $w = max(1, (int) round($sw * $scale));
+        $h = max(1, (int) round($sh * $scale));
+
+        $dst = imagecreatetruecolor($w, $h);
+        // Latar putih: diagram PNG transparan tetap terbaca di tema gelap
+        imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $w, $h, $sw, $sh);
+        imagedestroy($src);
+
+        return $this->save($dst, $dir, false);
+    }
+
     /** Ikon aplikasi: persegi, transparansi dipertahankan. */
     public function storeIcon(UploadedFile $file, string $dir, int $size = 256): string
     {

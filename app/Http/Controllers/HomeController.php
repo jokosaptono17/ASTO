@@ -21,6 +21,14 @@ class HomeController extends Controller
         $recent = $recentIds->map(fn ($id) => $apps->firstWhere('id', $id))->filter()->values();
 
         $campaigns = Campaign::live()->get();
+
+        // Ujian event yang ditunjuk untuk user; pemberitahuan muncul sekali per login
+        $exams = app(\App\Services\Exams\ExamService::class)->pendingFor($user);
+        $notice = $exams->first(fn ($i) => $i->state === 'open' && ! $i->done && ! $request->session()->has('exam_notice.'.$i->exam->id));
+        if ($notice) {
+            $request->session()->put('exam_notice.'.$notice->exam->id, now()->timestamp);
+            \App\Models\ExamParticipant::where('exam_id', $notice->exam->id)->where('user_id', $user->id)->whereNull('notified_at')->update(['notified_at' => now()]);
+        }
         $announcements = Announcement::live()->take(10)->get();
 
         return view('portal.home', [
@@ -46,10 +54,12 @@ class HomeController extends Controller
                 'monthIn' => (int) \App\Models\PointTransaction::where('user_id', $user->id)->where('amount', '>', 0)->whereIn('kind', ['earn', 'grant', 'adjust'])->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
                 'coupons' => \App\Models\Redemption::where('user_id', $user->id)->where('status', 'pending')->count(),
             ],
-            // Pop-up kampanye; admin bisa pratinjau dengan ?pratinjau-popup={id}
+            'exams' => $exams,
+            'examNotice' => $notice,
+            // Pop-up kampanye; admin bisa pratinjau dengan ?pratinjau-popup={id}. Pemberitahuan ujian didahulukan.
             'popup' => ($preview = $request->query('pratinjau-popup')) && $user->canManageContent()
                 ? Campaign::where('format', 'popup')->find($preview)
-                : Campaign::popupFor($user),
+                : ($notice ? null : Campaign::popupFor($user)),
             'popupPreview' => (bool) ($preview ?? false),
         ]);
     }
