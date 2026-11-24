@@ -1,7 +1,8 @@
 # AstoOne — Dokumen Serah-Terima Proyek
 
 > Portal aplikasi Plant ASTO · `https://plantasto.my.id` · repo `jokosaptono17/ASTO` (cabang `main`)
-> Disusun 24 November 2026, setelah PR #1–#12 di-merge. Pemilik proyek: Plant Instruktur, Dept. Plant jobsite ASTO.
+> Versi final 24 November 2026, setelah PR #1–#14 di-merge (riwayat lengkap di §3). Pemilik proyek: Plant Instruktur, Dept. Plant jobsite ASTO.
+> Simpan file ini sebagai arsip; salinan yang selalu mutakhir ada di repo: `docs/HANDOVER.md`.
 
 Dokumen ini adalah titik masuk tunggal untuk siapa pun yang meneruskan pengembangan AstoOne,
 baik developer manusia maupun AI agent. Isinya: apa yang sudah dibangun, mengapa dibangun begitu,
@@ -82,7 +83,7 @@ Fitur utama:
 |---|---|---|
 | Portal aplikasi | Semua | Ikon aplikasi Plant ASTO (LMS, shop manual, Monata, dll.), favorit, pencarian, lampu status online |
 | Kampanye & pengumuman | Semua · dikelola SHE/admin | Banner 2:1, kartu 4:5, pop-up 3:4 saat aplikasi dibuka (bisa wajib-baca), pita pengumuman penting |
-| Mentari | Semua | Asisten chat: kartu karyawan, pengetahuan aplikasi, statistik, data training LMS; obrolan bebas ke AI opsional |
+| Mentari | Semua | Asisten chat yang paham bahasa sehari-hari & salah ketik, ingat konteks obrolan, menjawab dari data asli (karyawan, poin, absensi, ujian, training LMS) dan panduan; pertanyaan bebas ke AI gratis (Groq/Gemini/OpenRouter) dengan pengaman privasi & kuota |
 | Absensi | Semua · host GL | Satu QR `/absen`, geofence GPS, jadwal rutin P5M/Safety Talk otomatis, status fatigue, rekap & Excel |
 | Poin HEBAT | Semua · admin | Poin reward tertutup, katalog hadiah, kupon QR, pemberian poin event dengan persetujuan |
 | Ujian Event | Peserta ditunjuk · admin | Ujian kompetisi (Best Mekanik/GL), satu kode per event, nilai di server, pantau langsung |
@@ -114,7 +115,7 @@ Semua PR sudah di-merge ke `main`.
 | #11 | 24 Nov | Lanjut otomatis | Ruang ujian pindah ke soal berikutnya setelah memilih (jeda 450 ms, bisa dimatikan) | — |
 | #12 | 24 Nov | SSO MekanikPintar | `/sso/mekanikpintar`: layar persetujuan, surat jalan HMAC-SHA256 90 detik sekali pakai | — (hanya `.env`) |
 | #13 | 24 Nov | Dokumen serah-terima | `docs/HANDOVER.md` (dokumen ini) | — |
-| #14 | 25 Nov | Mentari cerdas | Bahasa chat & salah ketik, ingatan percakapan, pengetahuan BM25 + 15 panduan bawaan, ujian, log pertanyaan + 👍/👎, AI gratis Groq/Gemini/OpenRouter dengan tool calling, kuota & privasi | `create_mentari_logs_table` |
+| #14 | 24 Nov | Mentari cerdas | Bahasa chat & salah ketik, ingatan percakapan, pengetahuan BM25 + 15 panduan bawaan, ujian, log pertanyaan + 👍/👎, AI gratis Groq/Gemini/OpenRouter dengan tool calling, kuota & privasi | `create_mentari_logs_table` |
 
 Jumlah tes bertambah dari 24 (PR #1) menjadi **110** (PR #14).
 
@@ -198,12 +199,14 @@ app/
   Models/                User, AppLink(tabel apps), Category, Campaign(+Click, View), Announcement, Setting,
                          MentariFaq, ActivityLog, AppVisit, Attendance*(Type, Location, Schedule, Session, Record),
                          Point*(Transaction, Rule, Grant, GrantRecipient), Reward, Redemption,
-                         QuestionSet, Question, Exam, ExamParticipant, ExamAttempt, ExamAnswer
+                         QuestionSet, Question, Exam, ExamParticipant, ExamAttempt, ExamAnswer, MentariLog
   Services/              Geo, ImageService, LmsDirectory, Spreadsheet, UserImporter,
-                         Mentari/(MentariGuide, MentariContext, PeopleDesk, AttendanceDesk, PointsDesk),
+                         Mentari/(MentariBrain, Language, Memory, KnowledgeBase, MentariGuide, MentariContext,
+                                  PeopleDesk, AttendanceDesk, PointsDesk, ExamDesk,
+                                  Ai/(Agent, Providers, LlmClient, LlmError)),
                          Points/PointService, Exams/(ExamService, QuestionImporter, ExamException)
-config/services.php      mentari, lms, mekanikpintar (SSO)
-database/migrations/     9 migrasi (lihat §9)
+config/services.php      mentari (+ mentari.ai: penyedia AI gratis), lms, mekanikpintar (SSO)
+database/migrations/     10 migrasi (lihat §9)
 docs/                    DEPLOY, absensi, mentari, poin, ujian, HANDOVER (dokumen ini)
 public/build/            aset hasil Vite (DI-COMMIT)
 public/sw.js             service worker — naikkan VERSION bila diubah
@@ -216,8 +219,8 @@ resources/views/
   admin/                 dashboard, users, apps, campaigns, announcements, mentari, settings,
                          attendance/*, points/*, exams/* (index, form, show, attempt, screen, bank/*)
   sso/mekanikpintar      layar persetujuan SSO
-routes/web.php           semua route web (± 174 route)
-routes/console.php       jadwal: astoone:check-apps tiap 10 menit, prune log mingguan
+routes/web.php           semua route web (± 177 route)
+routes/console.php       jadwal: astoone:check-apps tiap 10 menit; mingguan: buang log kunjungan > 1 th & mentari_logs > 90 hari
 tests/Feature, tests/Unit
 ```
 
@@ -279,25 +282,41 @@ Admin pertama dibuat oleh seeder dari `ADMIN_NRP`/`ADMIN_NAME`.
 - Pengumuman punya level (mis. penting/darurat) yang tampil di pita beranda. Lonceng desktop memakai `users.announcements_seen_at`.
 
 ### 8.4 Mentari (`MentariController` → `Services\Mentari\MentariBrain`)
-Alur lengkap, pengaturan AI, privasi, dan panel admin: **`docs/mentari.md`**. Ringkasnya:
-`Language` (singkatan/salah ketik) → `Memory` (pertanyaan lanjutan) → `MentariGuide` (data asli) → `KnowledgeBase`
-(BM25: panduan bawaan `GUIDES`, FAQ, aplikasi, pengumuman) → `Ai\Agent` (Groq → Gemini → OpenRouter, tool calling ke
-`MentariGuide::tool()`) → `MENTARI_ENDPOINT` → cadangan. Jejak di `mentari_logs`; admin mengubah pertanyaan yang
-belum terjawab menjadi FAQ. Respons chat membawa `source` (guide/knowledge/ai/fallback), `provider_label`, `log_id`.
+Rujukan teknis lengkap ada di `docs/mentari.md`. Ringkasan berikut cukup untuk memahami dan merawatnya.
 
-Detail otak bawaan:
-- Intent berstruktur dijawab dari database:
-  - `people` lewat `PeopleDesk` (kartu karyawan, data saya, GL wali, mekanik asuh, training);
-  - `appKnowledge`;
-  - `stats` (admin);
-  - `account`, `install`, `announcements`, `campaigns`, `faq`, `findApp`;
-  - poin lewat `PointsDesk`, absensi lewat `AttendanceDesk`, ujian lewat `ExamDesk` (kode ujian hanya untuk admin ujian).
-- Hanya yang tidak terjawab (`fallback`) yang sampai ke AI gratis; `greeting`/`identity`/`thanks` hanya ke
-  `MENTARI_ENDPOINT` lama bila diatur. Bila semua gagal, otak bawaan yang menjawab.
-- Balasan ke browser: `reply`, `actions` (`href` atau `ask`), `cards` (`person`/`stats`/`list`), `intent`.
-  Tautan dari AI disaring: hanya relatif, `APP_URL`, atau `wa.me`.
-- FAQ dikelola di `/admin/mentari` (ada halaman uji).
-- Kontrak lengkap: `docs/mentari.md`.
+**Alur berpikir** — setiap pertanyaan melewati lapis berikut; yang lebih pasti dan gratis didahulukan:
+
+| Lapis | Kelas | Isi |
+|---|---|---|
+| 0. Bahasa | `Language` | Singkatan chat → kata baku (`brp poin sy` → berapa poin saya), huruf berulang, koreksi salah ketik Damerau ke kosakata AstoOne (`abesn` → absen), akhiran "-nya" dipisah. Kata umum (`COMMON`) dan nama orang (`lite()`) tidak dikoreksi. |
+| 1. Ingatan | `Memory` (sesi, 15 menit) | "training dia?", "GL walinya siapa?", "cara pakainya?" ditulis ulang memakai orang/aplikasi yang terakhir dibahas. |
+| 2. Data asli | `MentariGuide` + `PeopleDesk`, `PointsDesk`, `AttendanceDesk`, `ExamDesk` | Kartu karyawan, data saya, GL wali, mekanik asuh, training LMS, statistik (admin), poin & hadiah, absensi, ujian & nilai, akun/PIN, pasang aplikasi, pengumuman, kampanye, FAQ, cari aplikasi. Pertanyaan "bagaimana/kenapa" dilewatkan ke lapis berikut. |
+| 3. Pengetahuan | `KnowledgeBase` (BM25, cache 5 menit) | 15 panduan bawaan (`GUIDES`: absen, fatigue, GPS, 1 HP 1 NRP, poin, tukar hadiah, ujian, PIN, pasang aplikasi, SSO, data salah, dll.) + FAQ admin + penjelasan aplikasi + pengumuman + kampanye. Dijawab langsung bila cocok kuat. |
+| 4. AI gratis | `Ai\Agent`, `Ai\Providers`, `Ai\LlmClient` | Groq → Gemini → OpenRouter. AI memanggil **alat** (`MentariGuide::tool()`: cari/info aplikasi, pengumuman, katalog, pengetahuan, poin/absensi/ujian/nilai saya, data karyawan, riwayat training, statistik admin) sehingga data selalu dari database. Maks 3 putaran alat. |
+| 5. Layanan lama | `MENTARI_ENDPOINT` | Kontrak lama (sama dengan Mentari LMS), bila diatur. |
+| 6. Cadangan | — | Maaf + tombol WhatsApp admin (+ saran aplikasi yang tersinggung). Pertanyaan dicatat. |
+
+**Pengaman AI**
+- Hanya pertanyaan yang tidak terjawab lapis 0–3 yang memakai AI. Tamu (belum login) tidak pernah memakai AI.
+- Privasi: hanya penyedia `personal: true` (Groq — tidak melatih model dengan data API) yang menerima nama, seksi,
+  dan hasil alat pribadi. Gemini/OpenRouter gratis hanya menerima pengetahuan umum; NRP & No HP disamarkan dan
+  jawaban Mentari sebelumnya tidak dikirim. No HP tidak pernah dikirim ke AI mana pun. Kode ujian tidak pernah diberikan ke peserta.
+- Kuota: batas per orang per hari (Setting `mentari_ai_per_user`, bawaan 25), hitungan harian per penyedia
+  (`*_DAILY_LIMIT`, perkiraan), jawaban umum di-cache 6 jam.
+- Gangguan: 429 → jeda ≥ 10 menit; 401/403/404 (kunci/model salah) → jeda 1 jam; 5xx → 3 menit; lalu penyedia
+  berikutnya. Model yang menolak alat (400) dicoba ulang sekali tanpa alat. Sebab terakhir tampil di panel.
+- Saklar hidup/mati AI: Setting `mentari_ai_enabled` (Panel → Mentari).
+
+**Panel admin `/admin/mentari`**: alur berpikir & statistik 7 hari, status tiap penyedia + pemakaian hari ini,
+saklar & batas per orang, **pertanyaan yang belum terjawab** (dikelompokkan; tombol *Buat jawaban* mengisi FAQ dan
+menandai beres), jawaban 👎, daftar FAQ, uji jawaban (boleh dengan AI, tidak dicatat).
+
+**Kontrak respons `/mentari/chat`**: `reply`, `actions` (`href` atau `ask`), `cards` (`person`/`stats`/`list`), `intent`,
+`source` (`guide` | `knowledge` | `ai` | `fallback`), `provider`, `provider_label`, `log_id` (untuk 👍/👎 lewat
+`/mentari/umpan-balik`). Tautan dari layanan AI lama disaring: hanya relatif, `APP_URL`, atau `wa.me`.
+
+**Data**: `mentari_faqs` (FAQ admin), `mentari_logs` (pertanyaan, sumber, penyedia, 👍/👎; dihapus 90 hari).
+Setelah FAQ diubah, cache `mentari:kb` dan `mentari:vocab` dibersihkan otomatis.
 
 ### 8.5 Absensi
 Panduan lengkap: `docs/absensi.md`.
@@ -425,21 +444,22 @@ Catatan: `exam_attempts.status` punya default di database. Saat membuat model, i
 
 ## 10. Peta route
 
-Semua route ada di `routes/web.php`, sekitar 174 route. Lihat dengan `php artisan route:list --except-vendor`.
+Semua route ada di `routes/web.php`, sekitar 177 route. Lihat dengan `php artisan route:list --except-vendor`.
 
 | Area | Route penting |
 |---|---|
 | Tamu | `/masuk`, `/masuk/pin`, `/masuk/ganti-nrp`, `/aktivasi`, `/offline`, `/up` (health) |
-| Portal | `/`, `/aplikasi`, `/buka/{app}`, `/aplikasi/{app}/favorit`, `/info`, `/info/{announcement}`, `/kampanye/{campaign}` (+ `/popup`, `/popup/tutup`), `/profil`, `/profil/pin`, `/mentari/chat`, `/keluar` |
+| Portal | `/`, `/aplikasi`, `/buka/{app}`, `/aplikasi/{app}/favorit`, `/info`, `/info/{announcement}`, `/kampanye/{campaign}` (+ `/popup`, `/popup/tutup`), `/profil`, `/profil/pin`, `/mentari/chat`, `/mentari/umpan-balik`, `/keluar` |
 | Absensi | `/absen`, `/absen/{code}`, `/absen/kode`, `/absen/lokasi`, `/absensi-saya` |
 | Poin | `/poin`, `/poin/hadiah`, `/poin/hadiah/{reward}/tukar`, `/poin/kupon/{code}` |
 | Ujian | `/ujian`, `/ujian/kode`, `/ujian/{exam}`, `/ujian/{exam}/mulai`, `/ujian/sesi/{attempt}` (+ `/jawab`, `/sinkron`, `/pelanggaran`, `/kumpulkan`), `/ujian/hasil/{attempt}` |
 | SSO | `/sso/mekanikpintar` (GET/POST), `/batal`, `/ganti-akun` |
-| Admin | `/admin`, `/admin/pengguna`, `/admin/aplikasi`, `/admin/kategori`, `/admin/kampanye`, `/admin/pengumuman`, `/admin/mentari`, `/admin/pengaturan`, `/admin/absensi/*` (sesi, jadwal, lokasi, jenis, rekap, poster-qr), `/admin/poin/*` (aturan, hadiah, kupon, pemberian, penyesuaian, riwayat), `/admin/ujian/*` (bank, impor, template, ekspor, feed, layar, peserta) |
+| Admin | `/admin`, `/admin/pengguna`, `/admin/aplikasi`, `/admin/kategori`, `/admin/kampanye`, `/admin/pengumuman`, `/admin/mentari` (+ `/uji`, `/ai`, `/pertanyaan/beres`), `/admin/pengaturan`, `/admin/absensi/*` (sesi, jadwal, lokasi, jenis, rekap, poster-qr), `/admin/poin/*` (aturan, hadiah, kupon, pemberian, penyesuaian, riwayat), `/admin/ujian/*` (bank, impor, template, ekspor, feed, layar, peserta) |
 
 Rate limit penting:
 - kode ujian 12/menit, jawab 300/menit, sinkron dan pelanggaran 60/menit;
 - SSO 30/menit (tampil) dan 20/menit (setuju);
+- chat Mentari 30/menit, umpan balik 60/menit; pertanyaan AI dibatasi per orang per hari (Panel → Mentari);
 - login memakai `RateLimiter` sendiri.
 
 ---
@@ -497,7 +517,11 @@ Cron ini hanya dibutuhkan lampu status aplikasi dan pembersihan log. Absensi dan
 **Pemeriksaan pasca-deploy**:
 - `/up` mengembalikan 200;
 - masuk sebagai admin;
-- buka beranda, panel, satu halaman absensi, dan `/admin/ujian`.
+- buka beranda, panel, satu halaman absensi, `/admin/ujian`, dan `/admin/mentari` (status AI: Groq **Siap** bila kunci diisi).
+
+**Menghidupkan AI gratis Mentari** (sekali saja): console.groq.com → API Keys → *Create API Key* (Display Name bebas,
+mis. "AstoOne Mentari"; Expiration "No expiration") → salin kunci `gsk_…` (hanya tampil sekali) → tambahkan
+`GROQ_API_KEY=...` ke `.env` server → `php artisan config:cache`. Kunci **jangan** pernah dikirim lewat chat/WA.
 
 ---
 
@@ -507,7 +531,8 @@ Cron ini hanya dibutuhkan lampu status aplikasi dan pembersihan log. Absensi dan
 |---|---|
 | **MekanikPintar (LMS)** `mekanikpintar.com`, repo `mekanikpintar-lms` | AstoOne membaca data training/poin/achievement lewat koneksi `lms` read-only (`LmsDirectory`). SSO "Masuk dengan AstoOne" ke LMS (§8.8). Poin LMS **terpisah** dari Poin HEBAT. |
 | **Sertifikat** `sertifikat.mekanikpintar.com` (Flask) | Data sertifikat dibaca lewat koneksi `sertifikat` read-only. |
-| **Mentari AI** | Satu layanan AI di VPS bisa melayani AstoOne dan LMS (kontrak sama, dibedakan `context.app`). |
+| **Groq** (utama), **Gemini**, **OpenRouter** | AI gratis Mentari lewat API berformat OpenAI (`Ai\LlmClient`). Hanya Groq yang boleh menerima data karyawan (`personal: true`); dua lainnya hanya pengetahuan umum dengan NRP/HP disamarkan. Kuota gratis bisa berubah sewaktu-waktu — pantau di Panel → Mentari. |
+| **Mentari AI lama** (`MENTARI_ENDPOINT`) | Opsional: satu layanan AI di VPS bisa melayani AstoOne dan LMS (kontrak sama, dibedakan `context.app`). |
 | **Ujian lama** `ppdasto.github.io/soal_ujian` + Apps Script `SYSTEM_SOAL` + Google Sheet `INTEGRATED_KUMPULAN_SOAL` | Digantikan modul Ujian Event. Soal dipindah dengan mengunduh sheet sebagai .xlsx lalu mengimpornya di Bank soal. Sistem lama punya celah (kunci jawaban & password admin terbuka di kode halaman), jadi **matikan setelah migrasi selesai**. |
 | **Aplikasi lain di portal** (induksi, idcard, workshop/BANDARA, dll.) | Hanya ditautkan sebagai `AppLink`. Tidak ada integrasi data. |
 | **WhatsApp** | Hanya tautan `wa.me` (tombol bantuan, "Salin untuk WA"). Belum ada pengiriman otomatis. |
@@ -606,12 +631,18 @@ Cron ini hanya dibutuhkan lampu status aplikasi dan pembersihan log. Absensi dan
 | `.user.ini` aaPanel tidak bisa dihapus | Dikunci atribut immutable | `chattr -i .user.ini` (hati-hati, hanya saat deploy pertama) |
 | Dua soal dengan teks sama dianggap duplikat saat impor | Sidik hanya dari teks | Sidik = teks + gambar + opsi (sudah diperbaiki) |
 | PR ditolak karena isi deskripsi | Deskripsi memuat password/rahasia | Jangan pernah menyalin rahasia ke commit, PR, atau dokumen |
+| Kata benar "dikoreksi" jadi kata lain (tukang → tukar, kebaca → kenapa) | Koreksi ejaan terlalu longgar | Jarak ≤1 untuk kata ≤6 huruf, daftar `COMMON` kata umum, nama orang memakai `Language::lite()` |
+| Pencarian pengetahuan salah topik ("kenapa" → "napa") | Kata umum dipotong imbuhannya sebelum disaring | Saring `STOPWORDS` sebelum dan sesudah `stem()` |
+| Pertanyaan "bagaimana/kenapa" dijawab data mentah (saldo, riwayat absen) | Bagian data terlalu cepat mengklaim kata kunci | `PointsDesk`/`AttendanceDesk`/`ExamDesk` melewatkan pertanyaan cara/alasan ke pengetahuan/AI |
+| Nama aplikasi tersinggung dianggap permintaan membuka aplikasi ("torsi baut roda scania") | Pencocokan satu kata | `findApp` butuh kata "buka/cari/link…" atau ≥ 50% kata cocok; selebihnya jadi saran di jawaban cadangan |
+| Respons API Mentari berubah membuat tes lama gagal | Nama `source` diubah | `source` publik: `guide`, `knowledge`, `ai`, `fallback` — jangan diganti tanpa memperbarui tes & UI |
 
 ---
 
 ## 18. Keamanan & privasi data
 
-- **Rahasia** hanya di `.env` server: DB, `APP_KEY`, `MENTARI_TOKEN`, password user LMS read-only, `MEKANIKPINTAR_SSO_SECRET`.
+- **Rahasia** hanya di `.env` server: DB, `APP_KEY`, `MENTARI_TOKEN`, password user LMS read-only, `MEKANIKPINTAR_SSO_SECRET`,
+  `GROQ_API_KEY`/`GEMINI_API_KEY`/`OPENROUTER_API_KEY`. Panel admin hanya menampilkan status penyedia, tidak pernah kuncinya.
   Bila rahasia pernah terlihat di chat, log, atau tangkapan layar, **ganti** nilainya di server.
 - **PIN** di-hash, tidak pernah ditampilkan atau dikirim ke sistem lain (termasuk SSO).
 - **Data karyawan**: diimpor dari Excel manpower. No HP hanya untuk Administrator. Riwayat training hanya untuk diri sendiri, GL wali, dan Administrator.
@@ -623,6 +654,8 @@ Cron ini hanya dibutuhkan lampu status aplikasi dan pembersihan log. Absensi dan
 - **Poin**: buku besar tidak dapat diubah, idempoten, persetujuan empat mata untuk pemberian besar.
 - **SSO**: callback dicocokkan persis, HMAC-SHA256, kedaluwarsa 90 detik, nonce, dan `state` terikat ke browser.
 - **Absensi**: identitas dari akun, geofence, satu HP satu NRP. Keterbatasan Fake GPS sudah diketahui (lihat §8.5).
+- **Mentari & AI**: tamu tidak pernah memakai AI; data karyawan hanya ke penyedia `personal`; No HP tidak pernah dikirim
+  ke AI; kode ujian tidak pernah diberikan ke peserta; jejak pertanyaan (`mentari_logs`) hanya untuk admin dan dihapus 90 hari.
 - Header keamanan dari `SecurityHeaders`. Cookie sesi `secure` di produksi.
 
 ---
@@ -638,7 +671,7 @@ Belum dikerjakan. Urutan tidak mengikat; tanyakan prioritas ke pemilik.
 - Opsional: mengunduh gambar soal eksternal ke server (`ImageService`) agar tidak bergantung GitHub.
 
 **Mentari**
-- Isi `GROQ_API_KEY` di server untuk menghidupkan AI gratis (lihat `docs/mentari.md`).
+- Pastikan `GROQ_API_KEY` sudah terisi di server dan Groq berstatus **Siap** di Panel → Mentari (lihat §12).
 - Rutin buka Panel → Mentari: ubah pertanyaan yang belum terjawab menjadi FAQ, lengkapi Penjelasan/Cara pakai/PIC aplikasi.
 - Ide lanjutan: pengetahuan dari dokumen (SOP/shop manual ringkas) ke `KnowledgeBase`; satu layanan AI untuk LMS juga.
 
