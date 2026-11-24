@@ -19,6 +19,10 @@ class AttendanceDesk
         if (! preg_match('/\b(absen|absensi|kehadiran|hadir|p5m|safety talk)\b/u', $q)) {
             return null;
         }
+        // Pertanyaan "bagaimana / kenapa / bedanya" dijawab panduan atau AI, bukan data absensi
+        if (preg_match('/\b(bagaimana|kenapa|mengapa|kalau|ditolak|gagal|gps|lokasi|hp|error|beda|bedanya|apa itu|tidak bisa|maksud|aturan)\b/u', $q)) {
+            return null;
+        }
 
         if ($viewer->canHostAttendance() && preg_match('/\b(belum|tidak) (absen|hadir)|siapa.*(belum|tidak)/u', $q)) {
             return $this->missing($viewer);

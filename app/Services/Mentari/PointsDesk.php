@@ -16,6 +16,10 @@ class PointsDesk
         if (! preg_match('/\b(poin|point|hebat|hadiah|reward|kupon|tukar)\b/u', $q)) {
             return null;
         }
+        // "cara tukar hadiah", "bagaimana dapat poin" → panduan/AI
+        if (preg_match('/\b(cara|bagaimana|kenapa|mengapa|dapat|mendapat|mengumpulkan|aturan|apa itu|level)\b/u', $q) && ! preg_match('/\b(saldo|berapa)\b/u', $q)) {
+            return null;
+        }
         $lv = PointService::level($viewer);
         $fmt = fn ($n) => number_format($n, 0, ',', '.');
 

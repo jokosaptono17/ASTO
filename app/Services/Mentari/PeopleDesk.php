@@ -74,7 +74,7 @@ class PeopleDesk
             return $this->answer('NRP '.implode(', ', $missing).' tidak ditemukan di AstoOne. Periksa penulisannya, atau minta admin mendaftarkannya.');
         }
 
-        $text = $people->count() === 1 ? 'Ini data '.$people->first()->displayName().':' : 'Ini data karyawan yang Anda cari:';
+        $text = $people->count() === 1 ? ($this->fieldAnswer($people->first(), $q) ?? 'Ini data '.$people->first()->displayName().':') : 'Ini data karyawan yang Anda cari:';
         if ($missing) {
             $text .= "\n(NRP ".implode(', ', $missing).' tidak ditemukan.)';
         }
@@ -324,6 +324,25 @@ class PeopleDesk
         }
 
         return array_slice($actions, 0, 3);
+    }
+
+    /** "GL walinya siapa?", "seksinya apa?" → jawab langsung field yang ditanya. */
+    private function fieldAnswer(User $u, string $q): ?string
+    {
+        $name = $u->displayName();
+        $field = match (true) {
+            $this->has($q, ['wali', 'atasan']) => ['GL wali', $u->supervisor ? Str::title(Str::lower($u->supervisor)) : null],
+            $this->has($q, ['seksi', 'section', 'departemen']) => ['Seksi', $u->department],
+            $this->has($q, ['jabatan', 'posisi']) => ['Jabatan', $u->position],
+            $this->has($q, ['grade']) => ['Grade', $u->grade],
+            $this->has($q, ['lokasi', 'area kerja']) => ['Lokasi', $u->location],
+            default => null,
+        };
+        if (! $field) {
+            return null;
+        }
+
+        return $field[1] ? "{$field[0]} {$name}: {$field[1]}." : "{$field[0]} {$name} belum tercatat di AstoOne.";
     }
 
     public function canSeeDetail(User $target, User $viewer): bool

@@ -110,6 +110,15 @@ database LMS lewat **user MySQL khusus yang hanya bisa SELECT** pada tabel yang 
 
 Siapa boleh melihat riwayat training: orangnya sendiri, GL walinya, dan Administrator.
 
+## 9. Mentari AI gratis (opsional)
+
+1. Daftar gratis di https://console.groq.com → **API Keys** → *Create API Key* (tanpa kartu kredit).
+2. Tambahkan ke `.env` AstoOne (jangan dikirim lewat chat/WA): `GROQ_API_KEY=...`
+3. `php artisan config:cache`, lalu buka Panel → Mentari → bagian *AI gratis*: Groq harus berstatus **Siap**.
+   Uji di kotak *Uji jawaban* dengan centang "Izinkan memakai AI".
+
+Gemini (`GEMINI_API_KEY`) dan OpenRouter (`OPENROUTER_API_KEY`) opsional sebagai cadangan. Detail: `docs/mentari.md`.
+
 ## Update berikutnya
 
 ```bash

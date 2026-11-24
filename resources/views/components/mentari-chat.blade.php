@@ -4,6 +4,7 @@
     $viewer = auth()->user();
     $config = [
         'url' => route('mentari.chat'),
+        'feedbackUrl' => $viewer ? route('mentari.feedback') : null,
         'whatsapp' => \App\Models\Setting::whatsappNumber(),
         'page' => $page,
         'storeKey' => 'mentari:'.($viewer?->id ?? 'guest'),
@@ -47,7 +48,7 @@
                         <div class="font-display text-lg font-semibold">Mentari</div>
                         <div class="flex items-center gap-1.5 text-xs text-mist">
                             <span class="h-1.5 w-1.5 rounded-full bg-neon shadow-[0_0_8px_var(--color-neon)]"></span>
-                            <span>{{ config('services.mentari.endpoint') ? 'Asisten AI Plant ASTO' : 'Asisten Plant ASTO' }}</span>
+                            <span>{{ config('services.mentari.endpoint') || app(\App\Services\Mentari\Ai\Providers::class)->enabled() ? 'Asisten AI Plant ASTO' : 'Asisten Plant ASTO' }}</span>
                         </div>
                     </div>
                     <button type="button" @click="clear()" x-show="messages.length > 1" class="icon-btn" aria-label="Mulai percakapan baru" title="Mulai percakapan baru"><i class="ri-refresh-line text-xl"></i></button>
@@ -126,6 +127,22 @@
                                     </div>
                                 </template>
 
+                                {{-- Sumber jawaban + umpan balik --}}
+                                <template x-if="m.role === 'assistant' && (m.source === 'ai' || m.source === 'knowledge')">
+                                    <div class="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] text-mist">
+                                        <span x-show="m.source === 'ai'" class="inline-flex items-center gap-1 whitespace-nowrap"><i class="ri-sparkling-2-line text-neon"></i> Dijawab AI<span x-show="m.provider" x-text="' · ' + m.provider"></span> · bisa keliru</span>
+                                        <span x-show="m.source === 'knowledge'" class="inline-flex items-center gap-1 whitespace-nowrap"><i class="ri-book-open-line text-neon"></i> Dari panduan AstoOne</span>
+                                        <span class="grow"></span>
+                                        <template x-if="m.log_id && {{ $viewer ? 'true' : 'false' }}">
+                                            <span class="flex items-center gap-0.5 whitespace-nowrap">
+                                                <span x-show="m.rated === true || m.rated === false" class="mr-1" x-text="m.rated ? 'Terima kasih!' : 'Dicatat untuk admin'"></span>
+                                                <button type="button" @click="rate(m, true)" :disabled="m.rated === true || m.rated === false" class="grid h-8 w-8 place-items-center rounded-lg transition hover:bg-white/[0.06] disabled:hover:bg-transparent" :class="m.rated === true ? 'text-neon' : (m.rated === false ? 'opacity-30' : '')" aria-label="Jawaban membantu"><i :class="m.rated === true ? 'ri-thumb-up-fill' : 'ri-thumb-up-line'" class="text-base"></i></button>
+                                                <button type="button" @click="rate(m, false)" :disabled="m.rated === true || m.rated === false" class="grid h-8 w-8 place-items-center rounded-lg transition hover:bg-white/[0.06] disabled:hover:bg-transparent" :class="m.rated === false ? 'text-hivis' : (m.rated === true ? 'opacity-30' : '')" aria-label="Jawaban kurang membantu"><i :class="m.rated === false ? 'ri-thumb-down-fill' : 'ri-thumb-down-line'" class="text-base"></i></button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </template>
+
                                 <template x-if="(m.actions || []).length">
                                     <div class="mt-2.5 grid gap-1.5">
                                         <template x-for="a in m.actions" :key="(a.href || a.ask) + a.label">
@@ -150,10 +167,13 @@
                             </div>
                         </div>
                     </template>
-                    <div x-show="typing" x-cloak class="flex w-16 items-center justify-center gap-1 rounded-2xl rounded-bl-md border border-white/[0.07] bg-white/[0.04] py-3.5">
-                        <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neon"></span>
-                        <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neon [animation-delay:.15s]"></span>
-                        <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neon [animation-delay:.3s]"></span>
+                    <div x-show="typing" x-cloak class="flex w-max items-center gap-2.5 rounded-2xl rounded-bl-md border border-white/[0.07] bg-white/[0.04] px-4 py-3">
+                        <span class="flex items-center gap-1">
+                            <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neon"></span>
+                            <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neon [animation-delay:.15s]"></span>
+                            <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neon [animation-delay:.3s]"></span>
+                        </span>
+                        <span x-show="thinking" x-transition.opacity class="text-[13px] text-mist">Mentari sedang berpikir…</span>
                     </div>
                 </div>
 
