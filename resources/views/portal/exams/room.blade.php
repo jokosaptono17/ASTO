@@ -75,8 +75,19 @@
                                 <span class="letter" x-text="opt.label"></span>
                                 <span class="min-w-0 grow pt-1.5 leading-snug whitespace-pre-line text-fog" :class="item.choice === opt.key && '!text-ink'" :style="`font-size: ${15.5 * scale}px`" x-text="opt.text"></span>
                                 <i x-show="item.choice === opt.key" class="ri-checkbox-circle-fill mt-1.5 text-xl text-neon"></i>
+                                <span x-show="advancing && item.choice === opt.key" class="advance-bar" aria-hidden="true"></span>
                             </button>
                         </template>
+                    </div>
+
+                    {{-- Lanjut otomatis setelah memilih --}}
+                    <div class="mt-3 flex items-center justify-end gap-2 text-xs text-mist">
+                        <span x-show="advancing" x-transition.opacity class="mr-auto text-neon-soft" aria-live="polite"><i class="ri-arrow-right-double-line"></i> <span x-text="i < q.length - 1 ? 'Lanjut ke soal berikutnya…' : 'Selesai — memeriksa soal kosong…'"></span></span>
+                        <span>Lanjut otomatis</span>
+                        <button type="button" role="switch" :aria-checked="auto" @click="toggleAuto()" aria-label="Lanjut otomatis ke soal berikutnya setelah memilih jawaban"
+                                class="relative h-6 w-11 shrink-0 rounded-full transition" :class="auto ? 'bg-neon' : 'bg-white/15'">
+                            <span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform" :class="auto && 'translate-x-5'"></span>
+                        </button>
                     </div>
 
                     {{-- Navigasi desktop --}}

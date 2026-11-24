@@ -71,6 +71,9 @@ document.addEventListener('alpine:init', () => {
         hiddenAt: null,
         zoom: null,
         scale: 1,
+        auto: true,               // lanjut otomatis setelah memilih jawaban
+        advancing: false,
+        advanceTimer: null,
         timer: null,
         beat: null,
         dir: 1,
@@ -84,6 +87,7 @@ document.addEventListener('alpine:init', () => {
                 Object.entries(saved.flags || {}).forEach(([id, f]) => { const it = this.find(id); if (it) { it.flagged = f; this.pendingFlags[id] = f; } });
                 if (Number.isInteger(saved.i) && saved.i < this.q.length) this.i = saved.i;
                 this.scale = saved.scale || 1;
+                if (typeof saved.auto === 'boolean') this.auto = saved.auto;
             } catch {}
             if (Object.keys(this.pending).length || Object.keys(this.pendingFlags).length) this.flush();
 
@@ -114,10 +118,10 @@ document.addEventListener('alpine:init', () => {
             if (this.left === 0 && !this.submitting) this.submit(true);
         },
         persist() {
-            try { localStorage.setItem(this.key, JSON.stringify({ pending: this.pending, flags: this.pendingFlags, i: this.i, scale: this.scale })); } catch {}
+            try { localStorage.setItem(this.key, JSON.stringify({ pending: this.pending, flags: this.pendingFlags, i: this.i, scale: this.scale, auto: this.auto })); } catch {}
         },
 
-        go(n) { if (n >= 0 && n < this.q.length) { this.dir = n > this.i ? 1 : -1; this.i = n; this.navOpen = false; } },
+        go(n) { clearTimeout(this.advanceTimer); this.advancing = false; if (n >= 0 && n < this.q.length) { this.dir = n > this.i ? 1 : -1; this.i = n; this.navOpen = false; } },
         next() { if (this.i < this.q.length - 1) this.go(this.i + 1); else this.confirmOpen = true; },
         prev() { this.go(this.i - 1); },
         firstEmpty() { const n = this.q.findIndex((x) => !x.choice); this.confirmOpen = false; this.go(n < 0 ? 0 : n); },
@@ -128,9 +132,26 @@ document.addEventListener('alpine:init', () => {
             this.pending[it.id] = it.choice;
             this.persist();
             this.flush();
+            if (it.choice) this.queueAdvance();
         },
+        /* Lanjut otomatis: jeda singkat agar pilihan terlihat, lalu ke soal berikutnya.
+           Di soal terakhir: ke soal kosong pertama, atau buka konfirmasi kumpul bila semua terjawab. */
+        queueAdvance() {
+            clearTimeout(this.advanceTimer);
+            if (!this.auto) return;
+            const from = this.i;
+            this.advancing = true;
+            this.advanceTimer = setTimeout(() => {
+                this.advancing = false;
+                if (this.i !== from || this.confirmOpen || this.warn.show || this.navOpen || this.zoom || this.submitting) return;
+                if (this.i < this.q.length - 1) return this.go(this.i + 1);
+                const n = this.q.findIndex((x) => !x.choice);
+                if (n >= 0) this.go(n); else this.confirmOpen = true;
+            }, 450);
+        },
+        toggleAuto() { this.auto = !this.auto; clearTimeout(this.advanceTimer); this.advancing = false; this.persist(); },
         clear() { this.cur.choice = null; this.pending[this.cur.id] = null; this.persist(); this.flush(); },
-        toggleFlag() { const it = this.cur; it.flagged = !it.flagged; this.pendingFlags[it.id] = it.flagged; this.persist(); this.flush(); },
+        toggleFlag() { clearTimeout(this.advanceTimer); this.advancing = false; const it = this.cur; it.flagged = !it.flagged; this.pendingFlags[it.id] = it.flagged; this.persist(); this.flush(); },
         onKey(e) {
             if (this.confirmOpen || this.warn.show || this.navOpen || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA/.test(e.target.tagName)) return;
             if (this.zoom) { if (e.key === 'Escape') this.zoom = null; return; }

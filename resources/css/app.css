@@ -242,10 +242,14 @@
 
 /* Ruang ujian */
 .exam-opt { @apply relative flex w-full items-start gap-3.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 text-left transition; }
-.exam-opt:hover { @apply border-white/20 bg-white/[0.05]; }
+/* Hanya perangkat dengan mouse: di HP sentuhan meninggalkan efek hover di soal berikutnya */
+@media (hover: hover) { .exam-opt:hover { @apply border-white/20 bg-white/[0.05]; } }
 .exam-opt[aria-checked='true'] { @apply border-neon/70 bg-neon/[0.09]; box-shadow: 0 0 0 1px rgb(61 255 142 / .35), 0 12px 30px -16px rgb(61 255 142 / .6); }
 .exam-opt .letter { @apply grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/15 font-display text-[15px] font-bold text-fog transition; }
 .exam-opt[aria-checked='true'] .letter { @apply border-neon bg-neon text-[#04170d]; }
+/* Garis penanda "lanjut otomatis" di bawah pilihan yang dipilih (selaras jeda 450 ms di exam.js) */
+.advance-bar { position: absolute; left: 14px; right: 14px; bottom: 6px; height: 3px; border-radius: 9999px; background: var(--color-neon); transform-origin: left; animation: advance .45s linear both; box-shadow: 0 0 10px var(--color-neon); }
+@keyframes advance { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .nav-cell { @apply relative grid aspect-square place-items-center rounded-xl border font-display text-[15px] font-semibold transition; }
 .nav-cell[data-s='empty'] { @apply border-white/10 bg-white/[0.03] text-mist; }
 .nav-cell[data-s='done'] { @apply border-neon/40 bg-neon/15 text-neon; }
@@ -260,4 +264,4 @@
 .code-cell { @apply h-16 w-full rounded-2xl border border-white/15 bg-white/[0.04] text-center font-display text-[1.7rem] font-bold tracking-[.32em] text-ink uppercase placeholder:tracking-normal placeholder:text-mist/50 transition focus:border-hivis/70 focus:outline-none focus:ring-4 focus:ring-hivis/15; }
 @keyframes score-ring { from { stroke-dashoffset: var(--len); } }
 .score-ring { animation: score-ring 1.4s var(--ease-snap) both; }
-@media (prefers-reduced-motion: reduce) { .exam-card-glow::after, .q-in-r, .q-in-l, .timer-alarm, .score-ring { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .exam-card-glow::after, .q-in-r, .q-in-l, .timer-alarm, .score-ring, .advance-bar { animation: none !important; } }
