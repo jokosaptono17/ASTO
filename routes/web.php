@@ -30,6 +30,12 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/keluar', [AuthController::class, 'logout'])->name('logout');
 
+    // Masuk dengan AstoOne → MekanikPintar (LMS)
+    Route::get('/sso/mekanikpintar', [\App\Http\Controllers\SsoController::class, 'show'])->middleware('throttle:30,1')->name('sso.mekanikpintar');
+    Route::post('/sso/mekanikpintar', [\App\Http\Controllers\SsoController::class, 'approve'])->middleware('throttle:20,1')->name('sso.mekanikpintar.approve');
+    Route::post('/sso/mekanikpintar/batal', [\App\Http\Controllers\SsoController::class, 'cancel'])->name('sso.mekanikpintar.cancel');
+    Route::post('/sso/mekanikpintar/ganti-akun', [\App\Http\Controllers\SsoController::class, 'switchAccount'])->name('sso.mekanikpintar.switch');
+
     Route::get('/', HomeController::class)->name('home');
     Route::get('/aplikasi', [AppController::class, 'index'])->name('apps.index');
     Route::get('/buka/{app}', [AppController::class, 'go'])->name('apps.go');

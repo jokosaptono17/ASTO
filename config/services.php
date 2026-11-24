@@ -42,4 +42,10 @@ return [
         'timeout' => (int) env('MENTARI_TIMEOUT', 25),
     ],
 
+    // "Masuk dengan AstoOne" untuk MekanikPintar. Rahasia sama persis dengan ASTOONE_SSO_SECRET di .env LMS.
+    'mekanikpintar' => [
+        'secret' => env('MEKANIKPINTAR_SSO_SECRET'),
+        'callback' => env('MEKANIKPINTAR_SSO_CALLBACK', 'https://mekanikpintar.com/login/astoone/kembali'),
+    ],
+
 ];
