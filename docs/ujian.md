@@ -45,3 +45,10 @@ kompetisi dan event yang dinamis (Best Mekanik, Best GL, pre/post test training)
 ## Hak akses
 
 Gate `manage-exams` = Administrator & Admin SHE.
+
+## Ruang ujian: lanjut otomatis
+
+Setelah peserta memilih jawaban, soal berikutnya terbuka otomatis setelah jeda 450 ms (garis neon di
+pilihan menandai jedanya). Di soal terakhir: pindah ke soal kosong pertama, atau membuka konfirmasi
+kumpul bila semua sudah terjawab. Menekan "Ragu-ragu" selama jeda membatalkan perpindahan. Peserta
+bisa mematikannya lewat sakelar "Lanjut otomatis" (tersimpan di HP).
