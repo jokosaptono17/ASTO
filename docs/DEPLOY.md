@@ -17,7 +17,7 @@ Jalankan sebagai root lewat SSH/terminal aaPanel. Lakukan bertahap dan cek hasil
 cd /www/wwwroot
 rm -rf plantasto.my.id/*  plantasto.my.id/.user.ini 2>/dev/null   # folder bawaan aaPanel, masih kosong
 # .user.ini dikunci aaPanel; bila gagal dihapus: chattr -i plantasto.my.id/.user.ini lalu ulangi
-git clone -b portal-v2 https://github.com/jokosaptono17/ASTO.git plantasto.my.id
+git clone https://github.com/jokosaptono17/ASTO.git plantasto.my.id   # cabang main
 cd plantasto.my.id
 composer install --no-dev --optimize-autoloader
 ```
