@@ -1,6 +1,7 @@
 # AstoOne (repo ASTO)
 
 Portal PWA Plant ASTO: Laravel 12 + Blade + Alpine + Tailwind 4. Bahasa UI & komentar: Indonesia.
+Dokumen serah-terima lengkap (riwayat, keputusan, modul, skema, deploy, jebakan): `docs/HANDOVER.md` — baca dulu sebelum mengubah apa pun, dan perbarui bila menambah modul.
 
 - Login NRP + PIN 6 angka (`AuthController`); kolom password Laravel = `users.pin` (`getAuthPasswordName`).
 - Peran: `user`, `gl` (host absensi), `she` (kampanye & pengumuman), `admin` — gate `host-attendance`, `manage-content`, `admin` di `AppServiceProvider`.
