@@ -96,6 +96,13 @@
 
     /* Input */
     .field { @apply block w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[15px] text-ink placeholder:text-mist/60 transition focus:border-neon/60 focus:bg-white/[0.06] focus:outline-none focus:ring-4 focus:ring-neon/10; }
+    /* Dropdown: daftar pilihan bawaan browser (Windows/Android) memakai latar select sendiri —
+       latar transparan membuat teks terang di atas latar putih, jadi beri warna padat */
+    select.field { background-color: var(--color-bench); color-scheme: dark; }
+    select.field:focus { background-color: var(--color-ridge); }
+    select option, select optgroup { background-color: var(--color-bench); color: var(--color-ink); }
+    select option:checked { background-color: var(--color-seam); color: var(--color-neon); }
+    select option:disabled { color: var(--color-mist); }
     .label { @apply mb-1.5 block text-sm font-medium text-fog; }
     .error { @apply mt-1.5 flex items-start gap-1.5 text-sm text-alarm; }
 
