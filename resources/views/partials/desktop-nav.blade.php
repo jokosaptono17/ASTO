@@ -9,6 +9,9 @@
         ['points.index', 'Poin HEBAT', ['points.*']],
         ['info.index', 'Info', ['info.*', 'campaigns.*']],
     ];
+    if ($me && \App\Models\ExamParticipant::where('user_id', $me->id)->exists()) {
+        array_splice($links, 4, 0, [['exams.index', 'Ujian', ['exams.*']]]);
+    }
 @endphp
 <header x-data="{ scrolled: false, menu: false }" @scroll.window.throttle.50ms="scrolled = window.scrollY > 24"
         class="desk-nav hidden lg:block {{ $overlay ? 'fixed' : 'sticky' }} inset-x-0 top-0 z-40 transition-colors duration-300"

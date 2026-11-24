@@ -95,6 +95,12 @@
             <i class="ri-arrow-right-s-line text-xl text-mist"></i>
         </a>
 
+        <a href="{{ route('exams.index') }}" class="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-bench p-4">
+            <i class="ri-medal-2-line text-2xl text-hivis"></i>
+            <span class="grow"><span class="block font-semibold">Ujian saya</span><span class="text-sm text-mist">Masuk dengan kode & riwayat nilai</span></span>
+            <i class="ri-arrow-right-s-line text-xl text-mist"></i>
+        </a>
+
         {{-- Pasang aplikasi --}}
         <section x-data class="rounded-2xl border border-white/[0.06] bg-bench p-4">
             <div class="flex items-center gap-3">

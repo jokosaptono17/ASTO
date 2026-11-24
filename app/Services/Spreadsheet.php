@@ -12,9 +12,9 @@ use ZipArchive;
 class Spreadsheet
 {
     /** @return list<list<string>> */
-    public static function read(string $path, string $extension): array
+    public static function read(string $path, string $extension, ?string $preferSheet = null): array
     {
-        return strtolower($extension) === 'xlsx' ? self::readXlsx($path) : self::readCsv($path);
+        return strtolower($extension) === 'xlsx' ? self::readXlsx($path, $preferSheet) : self::readCsv($path);
     }
 
     /** @return list<list<string>> */
@@ -38,7 +38,8 @@ class Spreadsheet
     }
 
     /** @return list<list<string>> */
-    private static function readXlsx(string $path): array
+    /** Sheet pertama, atau sheet bernama $preferSheet bila ada (mis. "Soal"). */
+    private static function readXlsx(string $path, ?string $preferSheet = null): array
     {
         $zip = new ZipArchive;
         if ($zip->open($path) !== true) {
@@ -66,6 +67,11 @@ class Spreadsheet
             $wbXml = simplexml_load_string($wb);
             $wbXml->registerXPathNamespace('r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
             $first = $wbXml->sheets->sheet[0] ?? null;
+            foreach ($preferSheet ? $wbXml->sheets->sheet : [] as $candidate) {
+                if (strcasecmp(trim((string) $candidate['name']), $preferSheet) === 0) {
+                    $first = $candidate;
+                }
+            }
             if ($first) {
                 $rid = (string) $first->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
                 foreach (simplexml_load_string($rels)->Relationship as $rel) {
