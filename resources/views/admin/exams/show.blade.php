@@ -6,13 +6,18 @@
     @include('admin.exams._tabs')
 
     {{-- Kepala --}}
-    <section class="relative mb-5 overflow-hidden rounded-[26px] border {{ $exam->isOpen() ? 'border-hivis/35' : 'border-white/[0.07]' }} bg-bench">
-        @if ($exam->isOpen()) <span class="exam-card-glow" aria-hidden="true"></span> @endif
-        <x-contour class="pointer-events-none absolute -top-16 -right-24 h-72 w-[560px] opacity-20" />
+    <section class="relative z-10 mb-5 rounded-[26px] border {{ $exam->isOpen() ? 'border-hivis/35' : 'border-white/[0.07]' }} bg-bench">
+        {{-- Hiasan dipotong di lapisan sendiri agar menu "Aksi lain" tidak ikut terpotong --}}
+        <div class="pointer-events-none absolute inset-0 overflow-hidden rounded-[26px]" aria-hidden="true">
+            @if ($exam->isOpen()) <span class="exam-card-glow"></span> @endif
+            <x-contour class="absolute -top-16 -right-24 h-72 w-[560px] opacity-20" />
+        </div>
         <div class="relative flex flex-wrap items-start gap-5 p-5 lg:p-7">
             <div class="min-w-0 grow">
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="{{ $st['chip'] }}"><i class="{{ $st['icon'] }}"></i> {{ $st['label'] }}</span>
+                    @if ($exam->isArchived()) <span class="chip bg-white/[0.08] text-mist"><i class="ri-archive-line"></i> Diarsipkan {{ $exam->archived_at->locale('id')->translatedFormat('j M Y') }}</span> @endif
+                    @if ($exam->category) <a href="{{ route('admin.exams.index', ['kategori' => $exam->category]) }}" class="chip bg-white/[0.06] text-fog hover:text-ink"><i class="ri-price-tag-3-line"></i> {{ $exam->category }}</a> @endif
                     <span class="chip bg-white/[0.06] text-fog"><i class="{{ $exam->audience === 'open' ? 'ri-door-open-line' : 'ri-user-star-line' }}"></i> {{ $exam->audience === 'open' ? 'Terbuka dengan kode' : 'Peserta ditunjuk' }}</span>
                     <span class="chip bg-white/[0.06] text-fog"><i class="ri-eye-line"></i> Hasil: {{ \App\Models\Exam::RESULT_MODES[$exam->result_mode]['label'] }}</span>
                 </div>
@@ -43,8 +48,12 @@
                             @if ($exam->is_published)
                                 <form method="POST" action="{{ route('admin.exams.publish', $exam) }}">@csrf<button class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/[0.06]"><i class="ri-draft-line text-mist"></i> Tarik jadi draf</button></form>
                             @endif
-                            <form method="POST" action="{{ route('admin.exams.destroy', $exam) }}" onsubmit="return confirm('Hapus ujian ini beserta seluruh hasil peserta? Tindakan ini tidak bisa dibatalkan.')">@csrf @method('DELETE')<input type="hidden" name="force" value="1">
-                                <button class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-alarm/10"><i class="ri-delete-bin-line"></i> Hapus beserta hasil</button>
+                            @if ($exam->isArchived() || $exam->canArchive())
+                                <form method="POST" action="{{ route('admin.exams.archive', $exam) }}">@csrf<button class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/[0.06]"><i class="{{ $exam->isArchived() ? 'ri-inbox-unarchive-line' : 'ri-archive-line' }} text-mist"></i> {{ $exam->isArchived() ? 'Keluarkan dari arsip' : 'Arsipkan' }}</button></form>
+                            @endif
+                            <div class="my-1 h-px bg-white/[0.07]"></div>
+                            <form method="POST" action="{{ route('admin.exams.destroy', $exam) }}" onsubmit="return confirm(@js('Pindahkan ujian ini ke Tempat sampah? Peserta tidak bisa melihatnya lagi. Masih bisa dipulihkan selama '.\App\Models\Exam::TRASH_DAYS.' hari dari halaman Event ujian.'))">@csrf @method('DELETE')
+                                <button class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-alarm/10"><i class="ri-delete-bin-line"></i> Hapus (ke Tempat sampah)</button>
                             </form>
                         </div>
                     </div>

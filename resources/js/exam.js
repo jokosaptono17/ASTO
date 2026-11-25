@@ -245,6 +245,70 @@ document.addEventListener('alpine:init', () => {
     }));
 
     /* ---------------- Papan pantau admin ---------------- */
+    /* Admin → daftar event: pilihan banyak, aksi massal, dialog konfirmasi */
+    Alpine.data('examAdmin', (cfg) => ({
+        rows: cfg.rows || {},
+        selected: [],
+        busy: false,
+        dialog: { open: false, action: '', ids: [], names: [], more: 0, title: '', body: '', impact: '', icon: '', confirm: '', danger: false, needType: false, typed: '' },
+
+        get pageIds() { return Object.keys(this.rows).map(Number); },
+        get allChecked() { return this.pageIds.length > 0 && this.pageIds.every((id) => this.selected.includes(id)); },
+        get someChecked() { return this.selected.length > 0 && ! this.allChecked; },
+        get ready() { return ! this.dialog.needType || this.dialog.typed.trim().toUpperCase() === 'HAPUS'; },
+        isChecked(id) { return this.selected.includes(id); },
+        toggleAll(on) { this.selected = on ? [...this.pageIds] : []; },
+
+        /** Aksi yang mudah dibatalkan (arsip) langsung dijalankan tanpa dialog. */
+        run(action, ids) {
+            this.dialog = { ...this.dialog, action, ids: [...ids], typed: '' };
+            this.$nextTick(() => this.submit());
+        },
+
+        ask(action, ids, total = null) {
+            ids = [...ids];
+            const picked = ids.map((id) => this.rows[id]).filter(Boolean);
+            const n = total ?? ids.length;
+            const sum = (k) => picked.reduce((t, r) => t + (r[k] || 0), 0);
+            const sheets = sum('attempts');
+            const live = picked.filter((r) => r.live).length;
+            const one = n === 1 && picked.length === 1;
+            const subject = one ? `“${picked[0].title}”` : `${n} event`;
+            const d = { action, ids, names: picked.slice(0, 4).map((r) => r.title), more: Math.max(0, picked.length - 4), typed: '', impact: '', needType: false, danger: false };
+
+            if (action === 'trash') {
+                Object.assign(d, {
+                    title: `Hapus ${subject}?`, icon: 'ri-delete-bin-line', confirm: 'Pindahkan ke Tempat sampah', danger: true,
+                    body: `Event dipindah ke Tempat sampah dan tidak terlihat lagi oleh peserta. Masih bisa dipulihkan selama ${cfg.trashDays} hari.`,
+                    impact: live ? `${live} event masih ada peserta yang mengerjakan — event itu akan dilewati.` : (sheets ? `Termasuk ${sheets} lembar jawaban peserta. Ekspor hasil dulu bila masih diperlukan.` : ''),
+                });
+            } else if (action === 'restore') {
+                Object.assign(d, { title: `Pulihkan ${subject}?`, icon: 'ri-arrow-go-back-line', confirm: 'Pulihkan',
+                    body: 'Event kembali ke daftar dengan status dan hasil seperti sebelum dihapus.' });
+            } else if (action === 'purge' || action === 'empty-trash') {
+                Object.assign(d, {
+                    title: action === 'empty-trash' ? `Kosongkan Tempat sampah (${n} event)?` : `Hapus permanen ${subject}?`,
+                    icon: 'ri-delete-bin-2-line', confirm: 'Hapus permanen', danger: true, needType: true,
+                    body: 'Event, daftar peserta, dan seluruh lembar jawabannya dihapus selamanya. Tindakan ini tidak bisa dibatalkan.',
+                    impact: sheets ? `${sheets} lembar jawaban ikut terhapus.` : '',
+                    names: action === 'empty-trash' ? [] : d.names,
+                });
+            }
+            this.dialog = { ...this.dialog, ...d, open: true };
+            this.$nextTick(() => (this.dialog.needType ? this.$refs.typed : this.$refs.go)?.focus());
+        },
+
+        closeDialog() {
+            if (! this.busy) this.dialog.open = false;
+        },
+
+        submit() {
+            if (! this.ready || this.busy) return;
+            this.busy = true;
+            this.$nextTick(() => this.$refs.bulk.submit());
+        },
+    }));
+
     Alpine.data('examLive', (cfg) => ({
         rows: cfg.feed.rows, stats: cfg.feed.stats, state: cfg.feed.state, at: cfg.feed.at,
         tab: 'semua', q: '', busy: null, timer: null, flash: '', lastSync: Date.now(),

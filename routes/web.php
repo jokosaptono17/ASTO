@@ -167,12 +167,15 @@ Route::middleware('auth')->group(function () {
 
         Route::get('cari-karyawan', [$c, 'people'])->name('people');
         Route::get('/', [$c, 'index'])->name('index');
+        Route::get('rekap', [$c, 'exportList'])->name('export-list');
+        Route::post('massal', [$c, 'bulk'])->name('bulk');
         Route::get('baru', [$c, 'create'])->name('create');
         Route::post('/', [$c, 'store'])->name('store');
         Route::get('{exam}', [$c, 'show'])->whereNumber('exam')->name('show');
         Route::get('{exam}/ubah', [$c, 'edit'])->whereNumber('exam')->name('edit');
         Route::put('{exam}', [$c, 'update'])->whereNumber('exam')->name('update');
         Route::delete('{exam}', [$c, 'destroy'])->whereNumber('exam')->name('destroy');
+        Route::post('{exam}/arsip', [$c, 'archive'])->whereNumber('exam')->name('archive');
         Route::post('{exam}/terbit', [$c, 'publish'])->whereNumber('exam')->name('publish');
         Route::post('{exam}/buka-tutup', [$c, 'toggleOpen'])->whereNumber('exam')->name('toggle');
         Route::get('{exam}/feed', [$c, 'feed'])->whereNumber('exam')->name('feed');

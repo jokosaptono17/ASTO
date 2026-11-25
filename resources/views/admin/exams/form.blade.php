@@ -17,6 +17,12 @@
                     <input id="title" name="title" value="{{ old('title', $exam->title) }}" @input.debounce.300ms="fromTitle($event.target.value)" required maxlength="150" class="field" placeholder="Contoh: Seleksi Best Mekanik 2026 — Tahap 1">
                 </div>
                 <div>
+                    <label class="label" for="category">Kategori <span class="font-normal text-mist">(opsional)</span></label>
+                    <input id="category" name="category" value="{{ old('category', $exam->category) }}" list="exam-categories" maxlength="60" class="field" placeholder="Pilih atau ketik, misalnya Best Mekanik" autocomplete="off">
+                    <datalist id="exam-categories">@foreach ($categories as $c)<option value="{{ $c }}"></option>@endforeach</datalist>
+                    <p class="mt-1.5 text-xs text-mist">Mengelompokkan event di daftar & ringkasan per kategori. Pakai nama yang sama untuk event sejenis.</p>
+                </div>
+                <div>
                     <label class="label" for="description">Keterangan untuk peserta (opsional)</label>
                     <textarea id="description" name="description" rows="3" maxlength="2000" class="field" placeholder="Materi yang diujikan, lokasi ruang ujian, atau pesan panitia">{{ old('description', $exam->description) }}</textarea>
                 </div>

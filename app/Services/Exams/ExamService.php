@@ -295,6 +295,18 @@ class ExamService
         $attempt->refresh()->update(['status' => 'disqualified']);
     }
 
+    /** Hapus permanen isi Tempat sampah yang sudah melewati masa simpan. Dipanggil malas + terjadwal. */
+    public function purgeTrash(): int
+    {
+        $n = 0;
+        Exam::onlyTrashed()->where('deleted_at', '<', now()->subDays(Exam::TRASH_DAYS))->each(function (Exam $e) use (&$n) {
+            $e->forceDelete();
+            $n++;
+        });
+
+        return $n;
+    }
+
     /** Ujian event untuk user di beranda: yang ditunjuk & masih bisa/perlu dikerjakan. */
     public function pendingFor(User $user): Collection
     {

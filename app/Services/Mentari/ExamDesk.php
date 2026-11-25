@@ -46,7 +46,7 @@ class ExamDesk
     {
         $items = $this->exams->pendingFor($viewer);
         if ($items->isEmpty()) {
-            $last = ExamAttempt::where('user_id', $viewer->id)->where('status', '!=', 'in_progress')->latest('id')->first();
+            $last = ExamAttempt::where('user_id', $viewer->id)->where('status', '!=', 'in_progress')->whereHas('exam')->latest('id')->first();
 
             return $this->reply('Saat ini tidak ada ujian yang ditunjuk untuk Anda.'.($last ? ' Ujian terakhir Anda: '.$last->exam->title.'.' : '')
                 .' Bila pengawas memberi kode, masukkan di halaman Ujian saya.', [], [['label' => 'Ujian saya', 'href' => route('exams.index')]]);
@@ -79,7 +79,7 @@ class ExamDesk
 
     private function results(User $viewer): array
     {
-        $tries = ExamAttempt::where('user_id', $viewer->id)->where('status', '!=', 'in_progress')->with('exam')->latest('submitted_at')->limit(5)->get();
+        $tries = ExamAttempt::where('user_id', $viewer->id)->where('status', '!=', 'in_progress')->whereHas('exam')->with('exam')->latest('submitted_at')->limit(5)->get();
         if ($tries->isEmpty()) {
             return $this->reply('Anda belum punya hasil ujian.', [], [['label' => 'Ujian saya', 'href' => route('exams.index')]]);
         }
