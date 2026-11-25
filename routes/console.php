@@ -12,3 +12,6 @@ Schedule::call(function () {
     // Jejak pertanyaan Mentari disimpan 90 hari saja
     \App\Models\MentariLog::where('created_at', '<', now()->subDays(90))->delete();
 })->weekly()->name('prune-logs');
+
+// Tempat sampah event ujian: dihapus permanen setelah 30 hari
+Schedule::call(fn () => app(\App\Services\Exams\ExamService::class)->purgeTrash())->daily()->name('purge-exam-trash');

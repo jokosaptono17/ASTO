@@ -23,7 +23,7 @@ class ExamController extends Controller
 
         return view('portal.exams.index', [
             'pending' => $this->exams->pendingFor($user),
-            'history' => ExamAttempt::where('user_id', $user->id)->where('status', '!=', 'in_progress')
+            'history' => ExamAttempt::where('user_id', $user->id)->where('status', '!=', 'in_progress')->whereHas('exam')
                 ->with('exam')->latest('submitted_at')->limit(30)->get(),
         ]);
     }
@@ -184,7 +184,8 @@ class ExamController extends Controller
 
     private function own(Request $request, ExamAttempt $attempt): void
     {
-        abort_unless($attempt->user_id === $request->user()->id, 404);
+        // Ujian yang dipindah ke Tempat sampah tidak lagi terlihat oleh peserta
+        abort_unless($attempt->user_id === $request->user()->id && $attempt->exam, 404);
     }
 
     private function status(ExamAttempt $attempt): JsonResponse

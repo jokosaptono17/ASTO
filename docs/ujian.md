@@ -39,7 +39,8 @@ kompetisi dan event yang dinamis (Best Mekanik, Best GL, pre/post test training)
 
 ## Tabel
 
-`question_sets`, `questions` (options JSON `{"A": …}`, `answer`), `exams`, `exam_question_set`
+`question_sets`, `questions` (options JSON `{"A": …}`, `answer`), `exams` (+ `category`, `archived_at`,
+`deleted_at`/`deleted_by` sejak PR #16), `exam_question_set`
 (pivot `take`), `exam_participants` (`label`, `notified_at`), `exam_attempts`, `exam_answers`.
 
 ## Hak akses
@@ -52,3 +53,38 @@ Setelah peserta memilih jawaban, soal berikutnya terbuka otomatis setelah jeda 4
 pilihan menandai jedanya). Di soal terakhir: pindah ke soal kosong pertama, atau membuka konfirmasi
 kumpul bila semua sudah terjawab. Menekan "Ragu-ragu" selama jeda membatalkan perpindahan. Peserta
 bisa mematikannya lewat sakelar "Lanjut otomatis" (tersimpan di HP).
+
+## Admin → Event ujian (PR #16): dashboard & pengelolaan jangka panjang
+
+Halaman `/admin/ujian` dirancang agar tetap ringan walau event sudah ratusan.
+
+**Bagian atas**
+- *Sedang berlangsung*: event yang dibuka saat ini, jumlah yang mengerjakan/selesai, tombol Pantau & Layar.
+- *Ringkasan* (periode 30 hari / 90 hari / tahun ini / semua; bisa disembunyikan, tersimpan di browser):
+  jumlah event per status, lembar selesai & karyawan berbeda, rata-rata nilai & tingkat lulus, kehadiran peserta
+  ditunjuk (event selesai, peserta yang tidak mengerjakan), grafik lembar selesai 12 bulan, tabel per kategori.
+- *Perlu perhatian* — tiap butir membuka daftar yang sudah tersaring (`?cek=`):
+  `tanpa-soal` (terbit tanpa paket soal → peserta tidak bisa mulai), `tanpa-peserta`, `draf-lama`
+  (draf tanpa hasil, tidak diubah 14 hari), `siap-arsip` (selesai > 30 hari); plus isi Tempat sampah.
+- *Berikutnya*: 4 event terjadwal terdekat.
+
+**Daftar**
+- Tab: Semua · Berlangsung · Terjadwal · Draf · Selesai · Arsip · Tempat sampah (angka mengikuti saringan).
+- Status disaring di database lewat `Exam::scopeInState()` (setara `state()`; ada tes yang menjaga keduanya sama).
+- Cari judul/kode/kategori, saring kategori (`-` = tanpa kategori) & tahun (`coalesce(opens_at, created_at)`),
+  urutkan (terbaru, jadwal, judul, peserta, nilai), 20/50/100 per halaman.
+- **Rekap** (`GET admin/ujian/rekap`): Excel daftar event sesuai saringan aktif.
+- Pilih banyak (centang) → bilah aksi: Arsipkan / Keluarkan / Hapus / Pulihkan / Hapus permanen.
+  Semua lewat `POST admin/ujian/massal` (`action`, `ids[]` maks 200, `confirm`).
+
+**Siklus hidup event**
+| Aksi | Syarat | Efek |
+|---|---|---|
+| Arsipkan | status draf atau selesai | hilang dari daftar utama; hasil tetap utuh, bisa dibuka & diekspor dari tab Arsip |
+| Hapus (Tempat sampah) | tidak ada peserta yang sedang mengerjakan | soft delete + `deleted_by`; hilang dari portal peserta (riwayat, hasil, kode, Mentari); bisa dipulihkan |
+| Pulihkan | di Tempat sampah | kembali seperti semula |
+| Hapus permanen | di Tempat sampah + ketik `HAPUS` | event, peserta, lembar jawaban hilang selamanya (FK cascade) |
+| Otomatis | 30 hari di Tempat sampah (`Exam::TRASH_DAYS`) | `ExamService::purgeTrash()` — dipanggil saat halaman dibuka + jadwal harian `purge-exam-trash` |
+
+Catatan: kode ujian di Tempat sampah tetap terkunci (indeks unik); pulihkan atau hapus permanen dulu untuk memakainya lagi.
+Bank soal tidak ikut terhapus — soal milik paket, bukan milik event. Semua aksi tercatat di `activity_logs` (`exam.*`).

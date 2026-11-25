@@ -150,6 +150,11 @@
     .side-link i { @apply text-lg text-mist; }
     .side-link[aria-current='page'] { @apply bg-neon/10 text-neon; }
     .side-link[aria-current='page'] i { @apply text-neon; }
+    .menu-item { @apply flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-fog transition hover:bg-white/[0.06] hover:text-ink; }
+    .menu-item i { @apply text-lg; }
+    .exam-check { @apply h-[18px] w-[18px] cursor-pointer appearance-none rounded-md border border-white/25 bg-white/[0.03] transition checked:border-neon checked:bg-neon indeterminate:border-neon indeterminate:bg-neon/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neon/20;
+        background-position: center; background-repeat: no-repeat; background-size: 12px; }
+    .exam-check:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2304170d'%3E%3Cpath d='M10 15.17 19.19 6l1.41 1.41L10 18 3.64 11.64l1.41-1.41z'/%3E%3C/svg%3E"); }
     .icon-btn { @apply grid h-9 w-9 place-items-center rounded-xl text-mist transition hover:bg-white/[0.06] hover:text-ink; }
 }
 

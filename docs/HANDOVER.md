@@ -116,8 +116,9 @@ Semua PR sudah di-merge ke `main`.
 | #12 | 24 Nov | SSO MekanikPintar | `/sso/mekanikpintar`: layar persetujuan, surat jalan HMAC-SHA256 90 detik sekali pakai | — (hanya `.env`) |
 | #13 | 24 Nov | Dokumen serah-terima | `docs/HANDOVER.md` (dokumen ini) | — |
 | #14 | 24 Nov | Mentari cerdas | Bahasa chat & salah ketik, ingatan percakapan, pengetahuan BM25 + 15 panduan bawaan, ujian, log pertanyaan + 👍/👎, AI gratis Groq/Gemini/OpenRouter dengan tool calling, kuota & privasi | `create_mentari_logs_table` |
+| #16 | 25 Nov | Admin Event ujian | Dashboard (berlangsung, ringkasan per periode, grafik 12 bulan, per kategori, perlu perhatian), daftar berskala (cari, kategori, tahun, urut, paginasi), kategori event, arsip, Tempat sampah 30 hari + hapus permanen, aksi massal, rekap Excel | `add_lifecycle_to_exams_table` |
 
-Jumlah tes bertambah dari 24 (PR #1) menjadi **110** (PR #14).
+Jumlah tes bertambah dari 24 (PR #1) menjadi **120** (PR #16).
 
 ---
 
@@ -157,6 +158,9 @@ Keputusan ini dibuat bersama pemilik. Jangan mengubahnya tanpa bertanya.
 - **Satu kode untuk semua peserta event**, diumumkan pengawas saat ujian dimulai.
 - Admin menunjuk peserta yang wajib ikut. Peserta mendapat pemberitahuan otomatis saat membuka beranda.
 - Bank soal dikelola di aplikasi dan bisa diimpor dari Excel, termasuk sheet lama `INTEGRATED_KUMPULAN_SOAL`.
+- (PR #16) Event tidak langsung dihapus permanen: **Arsip** untuk event lama, **Tempat sampah** 30 hari untuk yang
+  dihapus, hapus permanen harus mengetik `HAPUS`. Event berisi peserta yang sedang mengerjakan tidak bisa dihapus.
+  Rincian di `docs/ujian.md` → "Admin → Event ujian".
 
 ---
 
@@ -206,7 +210,7 @@ app/
                                   Ai/(Agent, Providers, LlmClient, LlmError)),
                          Points/PointService, Exams/(ExamService, QuestionImporter, ExamException)
 config/services.php      mentari (+ mentari.ai: penyedia AI gratis), lms, mekanikpintar (SSO)
-database/migrations/     10 migrasi (lihat §9)
+database/migrations/     11 migrasi (lihat §9)
 docs/                    DEPLOY, absensi, mentari, poin, ujian, HANDOVER (dokumen ini)
 public/build/            aset hasil Vite (DI-COMMIT)
 public/sw.js             service worker — naikkan VERSION bila diubah
@@ -219,7 +223,7 @@ resources/views/
   admin/                 dashboard, users, apps, campaigns, announcements, mentari, settings,
                          attendance/*, points/*, exams/* (index, form, show, attempt, screen, bank/*)
   sso/mekanikpintar      layar persetujuan SSO
-routes/web.php           semua route web (± 177 route)
+routes/web.php           semua route web (± 180 route)
 routes/console.php       jadwal: astoone:check-apps tiap 10 menit; mingguan: buang log kunjungan > 1 th & mentari_logs > 90 hari
 tests/Feature, tests/Unit
 ```
@@ -435,6 +439,7 @@ Panduan lengkap: `docs/ujian.md`.
 | `2026_11_20_000001` | `campaigns` + popup_frequency, popup_seconds, popup_ack, target_departments · `campaign_views` (views, first/last_seen, acknowledged_at, dismissed_at) |
 | `2026_11_20_000002` poin | `users` + points_balance, points_earned · `point_transactions` (buku besar, idem_key unik), `point_rules`, `point_grants`, `point_grant_recipients`, `rewards`, `redemptions` |
 | `2026_11_25_000001` | `mentari_logs` (user, pertanyaan, normalized, intent, source, provider, answered, helpful, ms, resolved_at) — dibersihkan 90 hari |
+| `2026_11_26_000001` | `exams` + `category`, `archived_at`, `deleted_at`, `deleted_by` (Arsip & Tempat sampah, PR #16) |
 | `2026_11_24_000001` ujian | `question_sets`, `questions`, `exams`, `exam_question_set` (take), `exam_participants`, `exam_attempts` (status in_progress/submitted/disqualified, finish_reason user/timeout/violations/admin, deadline_at, total/answered/correct/score, violations + log), `exam_answers` (position, option_order, choice, is_correct, flagged, answered_at) |
 
 Catatan: `exam_attempts.status` punya default di database. Saat membuat model, isi `status` secara eksplisit
@@ -444,7 +449,7 @@ Catatan: `exam_attempts.status` punya default di database. Saat membuat model, i
 
 ## 10. Peta route
 
-Semua route ada di `routes/web.php`, sekitar 177 route. Lihat dengan `php artisan route:list --except-vendor`.
+Semua route ada di `routes/web.php`, sekitar 180 route. Lihat dengan `php artisan route:list --except-vendor`.
 
 | Area | Route penting |
 |---|---|
